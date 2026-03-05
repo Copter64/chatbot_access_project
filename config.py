@@ -34,7 +34,7 @@ class Config:
     UNIFI_PASSWORD: str = os.getenv("UNIFI_PASSWORD", "")
     UNIFI_SITE: str = os.getenv("UNIFI_SITE", "default")
     UNIFI_VERIFY_SSL: bool = (
-        os.getenv("UNIFI_VERIFY_SSL", "false").lower() == "true"
+        os.getenv("UNIFI_VERIFY_SSL", "true").lower() == "true"
     )
     FIREWALL_GROUP_NAME: str = os.getenv(
         "FIREWALL_GROUP_NAME", "GameServerAccess"
