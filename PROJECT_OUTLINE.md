@@ -124,8 +124,11 @@ A Python-based Discord bot that allows users with the "gameserver" role to reque
 - [x] Create function to add IP to firewall group
 - [x] Create function to remove IP from firewall group
 - [x] Implement error handling for API failures
-- [ ] Test with UDM Pro firewall
+- [x] Test with UDM Pro firewall (live end-to-end confirmed 2026-03-06)
 - [x] Document firewall group setup requirements
+- [x] Create `GameServerAccess`, `Satisfactory Ports`, `UbuntuServerIP` firewall groups on UDM Pro
+- [x] Create `SatisfactoryServerAccess` WAN_IN rule (protocol=all, enabled=true)
+- [x] Create/update `SatisfactoryServer` port forward (7777,8888 tcp_udp)
 
 ### Phase 5: IP Management & Cleanup
 - [ ] Implement scheduled task (APScheduler or similar)
