@@ -1,39 +1,29 @@
 # Discord Bot Testing Guide
 
-This guide provides step-by-step instructions for testing the Discord bot before moving to Phase 3.
+This guide covers manual and automated testing for all completed phases.
 
 ---
 
-## Quick Summary
+## Test Status Overview
 
-✅ **Automated Tests**: 14/14 PASSED (100%)
-- Configuration validation
-- Database operations  
-- Bot event handlers
-- Token generation security
-- Role checking logic
-
-⏳ **Manual Tests**: To be performed in Discord
+| Phase | Automated | Manual |
+|---|---|---|
+| Phase 2 — Discord Bot | ✅ 14/14 passed | ✅ Verified in Discord |
+| Phase 3 — Web Server + TLS | ✅ 16/16 passed | ✅ End-to-end flow verified |
 
 ---
 
-## Phase 1: Run Automated Tests
-
-### Step 1: Run the Test Suite
+## Running All Automated Tests
 
 ```bash
-python3 test_discord_bot.py
+source venv/bin/activate
+python -m pytest tests/ -v
 ```
 
 **Expected Output:**
 ```
-✅ All automated tests passed
-📈 Pass Rate: 100.0%
-🎉 ALL AUTOMATED TESTS PASSED!
-Ready to proceed with manual Discord testing.
+tests/test_web_routes.py ................      16 passed
 ```
-
-If any test fails, check the error output and troubleshoot before proceeding.
 
 ---
 
@@ -53,10 +43,8 @@ python3 main.py
 ✅ Database initialized
 ✅ Discord bot initialized
 ✅ Bot commands set up
-Logged in as YourBotName (ID: ...)
-Connected to X guild(s)
-Commands synced to guild ...
-Bot is ready!
+✅ Web server running at https://yourdomain.com:8443
+✅ Bot initialization complete
 ```
 
 ⏱️ **Wait for "Bot is ready!"** - this means the bot is connected and commands are synced.
@@ -185,7 +173,7 @@ http://yourdomain.com:8080/check-ip/[TOKEN_HERE]
 1. Copy the access link from TEST 3
 2. Note the current time
 3. Wait 15 minutes
-4. Try to use the link (will test in Phase 3)
+4. Try to use the link — it should show an error page (expired)
 
 **Expected Behavior:**
 - Within 15 minutes: Link should work
@@ -339,12 +327,12 @@ TEST 8: Error Recovery              [  ] PASS  [  ] FAIL
 ```
 
 **Status:**
-- ✅ All tests passed: **Ready for Phase 3**
-- ❌ Some tests failed: Debug and retest before Phase 3
+- ✅ All tests passed: **Ready for Phase 3 web flow testing**
+- ❌ Some tests failed: Debug and retest
 
 ---
 
-## Troubleshooting
+## Phase 2 Troubleshooting
 
 ### "Command doesn't appear"
 1. Wait 1-5 minutes for Discord to sync
@@ -375,42 +363,132 @@ TEST 8: Error Recovery              [  ] PASS  [  ] FAIL
 
 ---
 
-## Next Steps
+## Phase 2 Next Steps
 
-✅ **If ALL tests pass:**
-1. Proceed to Phase 3: Web Server Module
-2. Implement IP verification page
-3. Test full access flow
+✅ **If ALL Phase 2 tests pass:**
+1. Proceed to Phase 3 web flow testing (see section below)
 
 ❌ **If tests fail:**
 1. Review errors above
 2. Check logs:
    ```bash
-   tail -f data/bot.log
+   tail -f /tmp/bot.log
    ```
 3. Debug and retest
-4. Ask for help if stuck
 
 ---
 
 ## Command Reference
 
 ```bash
-# Run automated tests
-python3 test_discord_bot.py
+# Run all automated tests
+python -m pytest tests/ -v
 
 # Start the bot
 python3 main.py
 
-# Check configuration
-python3 validate_bot.py
+# Watch logs live
+tail -f /tmp/bot.log
 
 # View database
 sqlite3 data/gameserver_access.db
 
-# View logs
-tail -f data/bot.log
-
-# Stop the bot
-Ctrl+C
+# Stop bot (background)
+pkill -f "python main.py"
 ```
+
+---
+
+## Phase 3 Manual Tests (Web Flow)
+
+### Prerequisites
+
+Before testing externally:
+- ✅ `sudo ufw allow 8443/tcp` run on server
+- ✅ UDM Pro port forward: external `8443` → `YOUR_SERVER_IP:8443`
+  - **The internal port must match `WEB_PORT`** — a common gotcha is having a stale port value
+- ✅ Public DNS A record points to public IP (verify with external DNS, not internal DNS)
+- ✅ Bot is running and `/health` returns `{"status": "ok"}`
+
+```bash
+# Quick health check from outside
+curl -sk https://home.chrissibiski.com:8443/health
+```
+
+### End-to-End Flow Test
+
+**From inside LAN (PC/laptop):**
+1. Run `/request-access` in Discord
+2. Open the DM link in a browser
+3. Page shows your **LAN IP** (e.g. `192.168.1.x`) — this is expected for LAN users
+4. Click **Confirm Access** — success page shown with IP and expiry date
+5. Try the same link again — should show "Link Expired or Already Used" (410)
+
+**From outside network (recommended for full test):**
+1. Turn off WiFi on your phone (use mobile data only)
+2. Run `/request-access` in Discord
+3. Open the DM link — page shows your **public/mobile IP**
+4. Click **Confirm Access** — success page shown
+5. Verify IP saved in the database (see below)
+
+### Verify IP in Database
+
+```bash
+sqlite3 data/gameserver_access.db "
+SELECT u.discord_username, i.ip_address, i.added_at, i.expires_at
+FROM ip_addresses i JOIN users u ON i.user_id = u.id
+ORDER BY i.added_at DESC LIMIT 5;
+"
+```
+
+### Error Page Tests
+
+| Test | Steps | Expected |
+|---|---|---|
+| Expired/used token | Visit a link that was already confirmed | Error page (410) |
+| Invalid token format | Visit `/check-ip/badtoken` | Error page (400) |
+| Double submit | POST confirm twice on same token | Error page (410) on second |
+
+### Monitoring Logs During Tests
+
+```bash
+tail -f /tmp/bot.log
+# Filter to web requests only
+tail -f /tmp/bot.log | grep -E 'GET|POST|ERROR|confirmed|denied'
+```
+
+---
+
+## Networking Troubleshooting
+
+### Page hangs / times out externally
+1. Check UDM Pro port forward — the **internal port** must match `WEB_PORT` (currently `8443`)
+2. Check server firewall: `sudo ufw status | grep 8443` — must show `ALLOW`
+3. Test public IP directly: `curl -sk https://YOUR_PUBLIC_IP:8443/health`
+
+### Page loads but shows internal IP
+- User is on the same LAN — expected behaviour
+- Use a phone on mobile data (WiFi off) to test external IP
+
+### DNS resolves to internal IP externally
+- Internal DNS override (split-horizon) is fine for LAN users
+- Verify public DNS: `curl -s "https://dns.google/resolve?name=yourdomain.com&type=A"`
+
+### TLS certificate error in browser
+- Cert may have expired (Let's Encrypt certs last 90 days)
+- Renew: `sudo certbot renew --manual --preferred-challenges dns`
+- Check file permissions: `python3 -c "open('/etc/letsencrypt/live/yourdomain/privkey.pem').read()"`
+
+---
+
+## Next Steps
+
+✅ **If ALL Phase 2 + Phase 3 tests pass:**
+- Proceed to Phase 4: Unifi API Integration
+- Requires: real `UNIFI_USERNAME`, `UNIFI_PASSWORD`, and `FIREWALL_GROUP_NAME` in `.env`
+
+❌ **If tests fail:**
+1. Review errors above
+2. Check logs: `tail -f /tmp/bot.log`
+3. Debug and retest
+

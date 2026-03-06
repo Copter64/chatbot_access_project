@@ -5,6 +5,7 @@ This module sets up the Discord bot with proper intents and event handlers.
 
 import discord
 from discord import app_commands
+from datetime import datetime, timezone
 from typing import Optional
 
 from config import Config
@@ -75,6 +76,48 @@ class GameServerBot(discord.Client):
     async def on_error(self, event: str, *args, **kwargs):
         """Event handler for errors."""
         logger.error(f"Error in event {event}", exc_info=True)
+
+    async def send_admin_alert(self, ip: str, detail: str) -> None:
+        """Send a security alert DM to all configured admin Discord users.
+
+        Called by the web security manager when a brute-force threshold is
+        reached. Silently skips admins with DMs disabled or invalid IDs.
+
+        Args:
+            ip: The offending client IP address.
+            detail: Human-readable description of the suspicious activity.
+        """
+        if not Config.ADMIN_DISCORD_USER_IDS:
+            logger.warning(
+                "Security alert triggered but ADMIN_DISCORD_USER_IDS "
+                "is not configured — alert not delivered."
+            )
+            return
+
+        timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+        message = (
+            f"⚠️ **Security Alert — Possible Brute-Force Attempt**\n"
+            f"**IP Address:** `{ip}`\n"
+            f"**Details:** {detail}\n"
+            f"**Time:** {timestamp}"
+        )
+
+        for user_id in Config.ADMIN_DISCORD_USER_IDS:
+            try:
+                user = await self.fetch_user(user_id)
+                await user.send(message)
+                logger.info(f"Security alert sent to admin user_id={user_id}")
+            except discord.Forbidden:
+                logger.warning(
+                    f"Cannot DM admin {user_id}: DMs disabled or bot blocked"
+                )
+            except discord.NotFound:
+                logger.warning(f"Admin user {user_id} not found")
+            except Exception as exc:
+                logger.error(
+                    f"Error sending security alert to admin {user_id}: {exc}",
+                    exc_info=True,
+                )
 
 
 # Global bot instance

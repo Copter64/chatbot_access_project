@@ -1,7 +1,129 @@
 # Project Progress Summary
 
-**Last Updated:** March 5, 2026  
-**Current Phase:** Phase 2 Complete → Phase 3 Ready to Start
+**Last Updated:** March 6, 2026
+**Current Phase:** Phase 3 Complete → Phase 4 Ready to Start
+
+---
+
+## ✅ Completed Work
+
+### Phase 1: Foundation & Setup (100% Complete)
+- ✅ Project structure with all directories
+- ✅ Python venv (3.12) with all dependencies
+- ✅ Development tools: black, flake8, pre-commit
+- ✅ Configuration system with validation
+- ✅ Database schema with SQLite
+- ✅ Logging system with colored output
+- ✅ Entry point (main.py)
+
+### Phase 2: Discord Bot Core (100% Complete)
+- ✅ Discord bot client (GameServerBot class)
+- ✅ Role verification (/request-access command)
+- ✅ Token generation (cryptographically secure)
+- ✅ Database operations for Users, Access tokens, IP addresses, Request history
+- ✅ Rate limiting (1 request per 5 minutes)
+- ✅ DM sending with fallback to ephemeral messages
+- ✅ Comprehensive error handling
+- ✅ 14/14 automated tests passing
+
+### Phase 3: Web Server Module (100% Complete)
+- ✅ Flask app factory (`web/app.py`) running in daemon thread
+- ✅ Routes (`web/routes.py`):
+  - `GET /health` — health check
+  - `GET /check-ip/<token>` — validates token, shows detected IP
+  - `POST /confirm-ip/<token>` — saves IP to DB, marks token used, redirects
+  - `GET /success` — access granted confirmation page
+- ✅ HTML templates (dark-themed):
+  - `check_ip.html` — IP confirmation page
+  - `success.html` — access granted page
+  - `error.html` — expired/invalid token page
+- ✅ HTTPS/TLS via Let's Encrypt cert (`fullchain.pem` / `privkey.pem`)
+  - Cert: `/etc/letsencrypt/live/home.chrissibiski.com/` (expires 2026-06-03)
+  - SSL context built with `ssl.PROTOCOL_TLS_SERVER`
+  - Graceful fallback to HTTP if SSL_CERT/SSL_KEY not set
+- ✅ Full end-to-end flow tested end-to-end (HTTP and HTTPS)
+- ✅ 16/16 pytest tests passing
+- ✅ Token single-use enforcement confirmed (410 on re-use)
+- ✅ Integrated into `main.py` (shares asyncio loop + database with bot)
+
+---
+
+## 🚀 Next Phase: Phase 4 - Unifi Integration
+
+### Objectives
+When a user's IP is confirmed via the web flow, automatically add it to the
+Unifi UDM Pro firewall group via the Unifi Controller API.
+
+### Components to Implement
+
+**1. Unifi API Client (`unifi_modules/`)**
+- Authenticate to Unifi Controller (cookie-based session)
+- GET firewall group by name (`FIREWALL_GROUP_NAME`)
+- PUT updated group with new IP added
+- DELETE IP from group when expired
+
+**2. Integration Points**
+- Call `unifi_modules` from `web/routes.py` `confirm_ip()` after IP is saved to DB
+- Handle Unifi API failures gracefully (log error, don't fail web response)
+
+**3. Scheduler for IP Expiry (`utils/` or `main.py`)**
+- Background task runs periodically (e.g. every hour)
+- Queries DB for IPs past `expires_at`
+- Removes them from the Unifi firewall group
+- Marks `is_active = 0` in the database
+
+### Files to Create
+1. `unifi_modules/__init__.py`
+2. `unifi_modules/client.py` — session auth + firewall group CRUD
+3. (optional) `utils/scheduler.py` — periodic cleanup task
+
+### Files to Modify
+1. `web/routes.py` — call Unifi client after IP confirmed
+2. `main.py` — start scheduler alongside bot and web server
+
+### .env Values Needed (already set as placeholders)
+```
+UNIFI_HOST=https://192.168.1.1
+UNIFI_USERNAME=<real admin user>
+UNIFI_PASSWORD=<real admin password>
+UNIFI_SITE=default
+UNIFI_VERIFY_SSL=false      # or true once Unifi cert is trusted
+FIREWALL_GROUP_NAME=GameServerAccess
+```
+
+---
+
+## 🔧 Development Environment Commands
+
+```bash
+source /home/copter64/chatbot_access_project/venv/bin/activate
+cd /home/copter64/chatbot_access_project
+
+# Run bot (HTTPS on port 8443)
+nohup python main.py > /tmp/bot.log 2>&1 &
+
+# Monitor logs
+tail -f /tmp/bot.log
+
+# Run tests
+python -m pytest tests/ -v
+
+# Stop bot
+pkill -f "python main.py"
+```
+
+## 🔒 TLS Certificate Renewal
+
+Cert expires **2026-06-03**. Renew before then:
+```bash
+sudo certbot renew --manual --preferred-challenges dns
+# Add the new _acme-challenge TXT record when prompted
+```
+
+---
+
+**Status:** 🟢 READY FOR PHASE 4
+
 
 ---
 
@@ -251,3 +373,31 @@ python3 -m flake8 /home/copter64/chatbot_access_project --extend-ignore=E501
 
 **Status:** 🟢 READY FOR PHASE 3  
 **Last Working Configuration:** F5 debugging with venv
+
+---
+
+## Phase 4: Unifi Firewall Integration — 2026-03-06
+
+### What Was Implemented
+
+- **`unifi_modules/client.py`** — `UnifiClient` class: cookie-based auth against UDM Pro (`POST /api/auth/login`), CSRF token management, lazy first-time login, automatic re-authentication on 401, thread-safe lock, graceful `UnifiAPIError` / `UnifiAuthError` exceptions.
+- **`unifi_modules/firewall.py`** — `UnifiFirewallManager` class: `add_ip()`, `remove_ip()`, `get_group_ips()`, `sync_group()` against `/proxy/network/api/s/{site}/rest/firewallgroup`. All operations are idempotent. Phase 5 `sync_group()` method included.
+- **`unifi_modules/__init__.py`** — Package init exporting all public classes.
+- **`web/routes.py`** — `confirm_ip` now calls `unifi_manager.add_ip(client_ip)` after DB save. Best-effort: Unifi failure is logged but never blocks the success page.
+- **`web/app.py`** — `create_app()` now accepts optional `unifi_manager` param injected as `app.config["UNIFI"]`.
+- **`main.py`** — Creates `UnifiClient` + `UnifiFirewallManager` at startup (lazy auth — no login until first IP confirmation). Gracefully degrades if Unifi is unreachable at boot.
+- **`requirements.txt`** — Added `requests>=2.31.0`.
+- **`.flake8`** — Created with `max-line-length = 88` to match black (was missing; flake8 was using 79-char default).
+
+### Tests
+
+- **`tests/test_unifi_client.py`** — 14 tests: login success/failure/network-error, CSRF storage, lazy login, retry on 401, HTTP error propagation, `is_authenticated()`.
+- **`tests/test_unifi_firewall.py`** — 17 tests: group fetch, not-found error, API error propagation, `add_ip` (new/duplicate/empty), `remove_ip` (present/absent/last), `sync_group` (update/no-op/empty).
+- **Total: 74/74 tests passing**, flake8 + black + isort all clean.
+
+### Notes
+
+- Unifi group **must exist** in UDM Pro before the bot runs: Network → Firewall & Security → Groups → Create Address Group named `GameServerAccess`.
+- Live test against UDM Pro still pending (requires network access to 192.168.1.1 with valid credentials).
+
+**Status:** 🟢 PHASE 4 COMPLETE (pending live UDM Pro test)

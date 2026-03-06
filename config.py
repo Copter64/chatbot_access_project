@@ -33,24 +33,16 @@ class Config:
     UNIFI_USERNAME: str = os.getenv("UNIFI_USERNAME", "")
     UNIFI_PASSWORD: str = os.getenv("UNIFI_PASSWORD", "")
     UNIFI_SITE: str = os.getenv("UNIFI_SITE", "default")
-    UNIFI_VERIFY_SSL: bool = (
-        os.getenv("UNIFI_VERIFY_SSL", "true").lower() == "true"
-    )
-    FIREWALL_GROUP_NAME: str = os.getenv(
-        "FIREWALL_GROUP_NAME", "GameServerAccess"
-    )
+    UNIFI_VERIFY_SSL: bool = os.getenv("UNIFI_VERIFY_SSL", "true").lower() == "true"
+    FIREWALL_GROUP_NAME: str = os.getenv("FIREWALL_GROUP_NAME", "GameServerAccess")
 
     # Web Server Configuration
     WEB_PORT: int = int(os.getenv("WEB_PORT", "8080"))
     WEB_HOST: str = os.getenv("WEB_HOST", "0.0.0.0")
-    WEB_BASE_URL: str = os.getenv(
-        "WEB_BASE_URL", f"http://localhost:{WEB_PORT}"
-    )
+    WEB_BASE_URL: str = os.getenv("WEB_BASE_URL", f"http://localhost:{WEB_PORT}")
 
     # Database Configuration
-    _db_path_env = os.getenv(
-        "DATABASE_PATH", "./data/gameserver_access.db"
-    )
+    _db_path_env = os.getenv("DATABASE_PATH", "./data/gameserver_access.db")
     DATABASE_PATH: str = (
         _db_path_env
         if os.path.isabs(_db_path_env)
@@ -59,16 +51,27 @@ class Config:
 
     # IP Access Configuration
     IP_EXPIRATION_DAYS: int = int(os.getenv("IP_EXPIRATION_DAYS", "30"))
-    TOKEN_EXPIRATION_MINUTES: int = int(
-        os.getenv("TOKEN_EXPIRATION_MINUTES", "15")
-    )
+    TOKEN_EXPIRATION_MINUTES: int = int(os.getenv("TOKEN_EXPIRATION_MINUTES", "15"))
     MAX_IPS_PER_USER: int = int(os.getenv("MAX_IPS_PER_USER", "5"))
 
-    # Rate Limiting
+    # Rate Limiting (Discord command)
     RATE_LIMIT_REQUESTS: int = int(os.getenv("RATE_LIMIT_REQUESTS", "1"))
-    RATE_LIMIT_PERIOD_MINUTES: int = int(
-        os.getenv("RATE_LIMIT_PERIOD_MINUTES", "5")
+    RATE_LIMIT_PERIOD_MINUTES: int = int(os.getenv("RATE_LIMIT_PERIOD_MINUTES", "5"))
+
+    # Web Security
+    WEB_RATE_LIMIT_REQUESTS: int = int(os.getenv("WEB_RATE_LIMIT_REQUESTS", "30"))
+    WEB_RATE_LIMIT_WINDOW_SECONDS: int = int(
+        os.getenv("WEB_RATE_LIMIT_WINDOW_SECONDS", "60")
     )
+    WEB_BRUTE_FORCE_THRESHOLD: int = int(
+        os.getenv("WEB_BRUTE_FORCE_THRESHOLD", "10")
+    )
+    # Comma-separated Discord user IDs to DM on security alerts
+    ADMIN_DISCORD_USER_IDS: list[int] = [
+        int(x.strip())
+        for x in os.getenv("ADMIN_DISCORD_USER_IDS", "").split(",")
+        if x.strip().isdigit()
+    ]
 
     # Logging Configuration
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
@@ -82,6 +85,10 @@ class Config:
             else os.path.join(PROJECT_ROOT, _log_file_env)
         )
     )
+
+    # TLS / SSL
+    SSL_CERT: Optional[str] = os.getenv("SSL_CERT") or None
+    SSL_KEY: Optional[str] = os.getenv("SSL_KEY") or None
 
     # Security
     SECRET_KEY: str = os.getenv("SECRET_KEY", "")

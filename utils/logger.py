@@ -111,19 +111,33 @@ def setup_logger(
                 "Logging to console only."
             )
 
+    # Forward discord.py's own logger (WARNING+) into our file so we can
+    # see rate-limit sleeps, auth errors, and connection events.
+    discord_logger = logging.getLogger("discord")
+    discord_logger.setLevel(logging.WARNING)
+    # Reuse the same handlers that our main logger has so output goes to
+    # the same console + file destinations.
+    discord_logger.handlers = list(logger.handlers)
+    # Don't propagate to root — avoids duplicate output.
+    discord_logger.propagate = False
+
     return logger
 
 
 def get_logger(name: str) -> logging.Logger:
-    """Get a logger instance.
+    """Get a logger instance as a child of the root application logger.
+
+    All module loggers are created under the ``gameserver_bot`` namespace so
+    they inherit the handlers configured by :func:`setup_logger` and their
+    output appears in both the console and the log file.
 
     Args:
-        name: Logger name.
+        name: Typically ``__name__`` from the calling module.
 
     Returns:
-        logging.Logger: Logger instance.
+        logging.Logger: Logger instance parented under ``gameserver_bot``.
     """
-    return logging.getLogger(name)
+    return logging.getLogger(f"gameserver_bot.{name}")
 
 
 # Create default logger

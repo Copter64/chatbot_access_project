@@ -10,7 +10,10 @@ from config import Config
 from database.models import Database
 from discord_modules.bot import initialize_bot
 from discord_modules.commands import setup_commands
+from unifi_modules.client import UnifiClient
+from unifi_modules.firewall import UnifiFirewallManager
 from utils.logger import setup_logger
+from web.app import create_app, run_web_server
 
 # Set up logger
 logger = setup_logger()
@@ -58,8 +61,48 @@ async def main():
         await setup_commands(db)
         logger.info("✅ Bot commands set up")
 
-        # TODO: Initialize web server
-        logger.info("Web server initialization will be implemented in Phase 3")
+        # Initialize and start web server in background thread
+        logger.info("Initializing web server...")
+        loop = asyncio.get_running_loop()
+
+        # Build a sync alert callback that schedules an async bot DM
+        def _alert_callback(ip: str, detail: str) -> None:
+            """Fire-and-forget: schedule admin alert DM on the bot loop."""
+            if bot is not None:
+                asyncio.run_coroutine_threadsafe(bot.send_admin_alert(ip, detail), loop)
+
+        # Initialise Unifi firewall manager (best-effort — bot starts even
+        # if Unifi is unreachable; login is lazy and happens on first IP add)
+        unifi_manager = None
+        try:
+            logger.info("Initializing Unifi client...")
+            unifi_client = UnifiClient(
+                host=Config.UNIFI_HOST,
+                username=Config.UNIFI_USERNAME,
+                password=Config.UNIFI_PASSWORD,
+                site=Config.UNIFI_SITE,
+                verify_ssl=Config.UNIFI_VERIFY_SSL,
+            )
+            unifi_manager = UnifiFirewallManager(
+                unifi_client, Config.FIREWALL_GROUP_NAME
+            )
+            logger.info(
+                f"✅ Unifi client initialized "
+                f"(group='{Config.FIREWALL_GROUP_NAME}', "
+                f"host={Config.UNIFI_HOST})"
+            )
+        except Exception as exc:
+            logger.error(
+                f"Failed to initialize Unifi client: {exc} — "
+                "IP confirmations will be saved to DB only until Unifi is available",
+                exc_info=True,
+            )
+
+        flask_app = create_app(
+            db, loop, alert_callback=_alert_callback, unifi_manager=unifi_manager
+        )
+        run_web_server(flask_app)
+        logger.info(f"✅ Web server running at {Config.WEB_BASE_URL}")
 
         # TODO: Initialize scheduler for cleanup tasks
         logger.info("Scheduler initialization will be implemented in Phase 4")

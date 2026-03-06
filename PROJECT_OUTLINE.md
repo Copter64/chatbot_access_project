@@ -103,24 +103,29 @@ A Python-based Discord bot that allows users with the "gameserver" role to reque
 - [x] Handle errors (DMs disabled, missing role, etc.)
 
 ### Phase 3: Web Server
-- [ ] Set up Flask/FastAPI application
-- [ ] Create IP check landing page (HTML template)
-- [ ] Implement token validation
-- [ ] Capture user's external IP (from request headers)
-- [ ] Create IP confirmation page
-- [ ] Handle IP submission endpoint
-- [ ] Store IP in database with 30-day expiration
-- [ ] Create success/error response pages
-- [ ] Ensure web server runs in same process as bot
+- [x] Set up Flask application
+- [x] Create IP check landing page (HTML template)
+- [x] Implement token validation
+- [x] Capture user's external IP (from request headers / X-Forwarded-For)
+- [x] Create IP confirmation page
+- [x] Handle IP submission endpoint (POST /confirm-ip/<token>)
+- [x] Store IP in database with 30-day expiration
+- [x] Create success/error response pages
+- [x] Ensure web server runs in same process as bot (daemon thread, shared loop)
+- [x] HTTPS/TLS via Let's Encrypt (ssl.SSLContext, certbot DNS challenge)
+- [x] UFW firewall rule for port 8443
+- [x] UDM Pro port forward (external 8443 → internal server:8443)
+- [x] Favicon 404 suppressed
+- [x] 16/16 pytest tests passing
 
 ### Phase 4: Unifi Firewall Integration
-- [ ] Research Unifi API documentation for UDM Pro
-- [ ] Implement Unifi authentication (get/refresh access token)
-- [ ] Create function to add IP to firewall group
-- [ ] Create function to remove IP from firewall group
-- [ ] Implement error handling for API failures
+- [x] Research Unifi API documentation for UDM Pro
+- [x] Implement Unifi authentication (get/refresh access token)
+- [x] Create function to add IP to firewall group
+- [x] Create function to remove IP from firewall group
+- [x] Implement error handling for API failures
 - [ ] Test with UDM Pro firewall
-- [ ] Document firewall group setup requirements
+- [x] Document firewall group setup requirements
 
 ### Phase 5: IP Management & Cleanup
 - [ ] Implement scheduled task (APScheduler or similar)
@@ -184,10 +189,14 @@ UNIFI_USERNAME=your_username
 UNIFI_PASSWORD=your_password
 UNIFI_SITE=default
 FIREWALL_GROUP_NAME=GameServerAccess
-WEB_PORT=8080
+WEB_PORT=8443
 WEB_HOST=0.0.0.0
+WEB_BASE_URL=https://yourdomain.com:8443
+SSL_CERT=/etc/letsencrypt/live/yourdomain.com/fullchain.pem
+SSL_KEY=/etc/letsencrypt/live/yourdomain.com/privkey.pem
 DATABASE_PATH=/data/gameserver_access.db
 IP_EXPIRATION_DAYS=30
+SECRET_KEY=your_random_secret_key
 ```
 
 ### Unifi Firewall Setup Requirements
