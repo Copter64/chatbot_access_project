@@ -105,3 +105,22 @@ The following pre-commit hooks must pass before every commit:
 - `check-yaml`, `check-json`, `check-merge-conflict`, `trailing-whitespace`, `end-of-file-fixer`
 
 Do not commit large files or leave merge conflict markers in code.
+---
+
+## Service Migration & Deployment Safety
+
+When moving the bot to a new host or container:
+
+1. **Stop the old instance first** — always confirm the bot is fully stopped on the source machine before starting it on the destination. Running two instances simultaneously causes duplicate Unifi API writes, duplicate Discord responses, and DB conflicts.
+   - Bare-metal: `pkill -f "python main.py"` and confirm with `ps aux | grep main.py`
+   - Docker: `docker compose down` and confirm with `docker ps`
+
+2. **Test Docker locally before deploying remotely** — run `docker compose up -d --build` on the dev machine first and verify `{"status":"ok"}` from the `/health` endpoint before touching the production host.
+
+3. **Check container user permissions before first run** — the container runs as `botuser` (UID 999). Ensure:
+   - `/etc/letsencrypt/live` and `/etc/letsencrypt/archive` are readable by UID 999 (use `setfacl -m u:999:rx`)
+   - `./data/` is owned by UID 999 (`chown -R 999:999 data/`)
+
+4. **Migrate the database before starting** — copy `data/gameserver_access.db` to the new host before the first `docker compose up` to preserve existing IP records.
+
+5. **Update port forwards on UDM Pro** — change the internal IP for port 8443 to the new host's LAN IP before cutting over traffic.
