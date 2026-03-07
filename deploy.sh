@@ -45,11 +45,13 @@ else
 fi
 
 # Add current user to docker group if not already there
-if ! groups | grep -qw docker; then
+ADDED_TO_DOCKER_GROUP=false
+if ! groups "$USER" | grep -qw docker; then
     info "Adding $USER to the docker group..."
     sudo usermod -aG docker "$USER"
-    warn "Group change takes effect on next login."
-    warn "This script will use 'sudo docker' for the remainder of this run."
+    ADDED_TO_DOCKER_GROUP=true
+    # Group change requires a new login to take effect for interactive use;
+    # use sudo docker for the remainder of this script run.
     DOCKER_CMD="sudo docker"
 else
     DOCKER_CMD="docker"
@@ -195,3 +197,12 @@ echo ""
 echo "  Next step: update the UDM Pro port forward for port ${WEB_PORT}"
 echo "  to point to this VM's LAN IP ($(hostname -I | awk '{print $1}'))"
 echo "---------------------------------------------------------------------"
+
+if [ "$ADDED_TO_DOCKER_GROUP" = true ]; then
+    echo ""
+    warn "ACTION REQUIRED: You were added to the docker group during this run."
+    warn "Run the following command now so future docker commands work without sudo:"
+    echo ""
+    echo "    newgrp docker"
+    echo ""
+fi
