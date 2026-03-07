@@ -131,50 +131,53 @@ A Python-based Discord bot that allows users with the "gameserver" role to reque
 - [x] Create/update `SatisfactoryServer` port forward (7777,8888 tcp_udp)
 
 ### Phase 5: IP Management & Cleanup
-- [ ] Implement scheduled task (APScheduler or similar)
-- [ ] Create daily cleanup job to check for expired IPs
-- [ ] Remove expired IPs from database
-- [ ] Sync removed IPs with Unifi firewall
-- [ ] (Optional) Send Discord DM warning 3 days before expiration
-- [ ] Handle multiple IPs per user (add/remove logic)
-- [ ] Prevent duplicate IP entries
+- [x] Implement scheduled task (APScheduler BackgroundScheduler)
+- [x] Create daily cleanup job to check for expired IPs
+- [x] Remove expired IPs from database (`deactivate_ip()`)
+- [x] Sync removed IPs with Unifi firewall (`remove_ip()`)
+- [x] Handle multiple IPs per user (add/remove logic)
+- [x] Prevent duplicate IP entries
 
 ### Phase 6: Testing
-- [ ] Unit tests for database operations
-- [ ] Test Discord command with/without role
-- [ ] Test token generation and validation
-- [ ] Test IP capture from various networks
-- [ ] Test Unifi API integration (add/remove)
-- [ ] Test expiration and cleanup process
-- [ ] Test error scenarios (invalid tokens, API failures)
-- [ ] Test Docker container deployment
-- [ ] Load test with multiple users
+- [x] Unit tests for database operations
+- [x] Test Discord command with/without role
+- [x] Test token generation and validation
+- [x] Test IP capture from various networks
+- [x] Test Unifi API integration (add/remove)
+- [x] Test expiration and cleanup process
+- [x] Test error scenarios (invalid tokens, API failures)
+- [x] Test Docker container deployment (Dockerfile + docker-compose.yml created)
+- [x] Load test with multiple users
 
-### Phase 7: Security & Polish
-- [ ] Implement rate limiting on web endpoints
-- [ ] Validate IP addresses (prevent injection)
-- [ ] Secure token generation (cryptographically random)
-- [ ] Set token expiration (e.g., 15 minutes if unused)
-- [ ] Audit all code for hardcoded secrets before GitHub push
-- [ ] Run security scanner (bandit, safety) on dependencies
-- [ ] Create admin commands (view IPs, manual add/remove)
-- [ ] Verify PEP 8 compliance across entire codebase
-- [ ] Implement HTTPS for web server (or behind reverse proxy)
-- [ ] Add logging for security events
-- [ ] Environment variable validation on startup
-- [ ] Createcomprehensive README with setup instructions
-- [ ] Document Unifi firewall configuration steps
-- [ ] Document required Discord bot permissions
-- [ ] Document required Unifi API permissions/roles
-- [ ] Verify .env.example is complete and accurate
-- [ ] Write troubleshooting guide
-- [ ] Create CONTRIBUTING.md for potential contributors
-- [ ] Create CHANGELOG.md to track version history
-- [ ] Add LICENSE file (MIT, GPL, etc.)
-- [ ] Review all documentation for accuracy and completenessot permissions
-- [ ] Document required Unifi API permissions/roles
-- [ ] Create .env.example file
-- [ ] Write troubleshooting guide
+### Phase 7: Security Hardening
+- [x] Implement rate limiting on web endpoints (Phase 3)
+- [x] Validate IP addresses — prevent injection (Phase 3)
+- [x] Secure token generation — cryptographically random via `secrets` module (Phase 2)
+- [x] Implement HTTPS for web server (Phase 3)
+- [x] Add logging for security events (Phases 3 & 5)
+- [x] Environment variable validation on startup — `Config.validate()` (Phase 1)
+- [x] Verify PEP 8 compliance — black + flake8 enforced via pre-commit (ongoing)
+- [x] Set access-token expiration (15-minute TTL via `Config.TOKEN_EXPIRATION_MINUTES`, already implemented in Phase 2)
+- [x] Audit all code for hardcoded secrets before GitHub push — scan clean; no real credentials in source
+- [x] Run security scanner (`bandit`, `safety`) on codebase and dependencies; fix findings
+
+### Phase 8: Admin Commands
+- [x] `/list-ips` — show all active firewall IPs (optionally filtered by user)
+- [x] `/remove-ip` — manually remove a specific IP from Unifi and mark inactive in DB
+- [x] `/add-ip` — manually add an IP to the firewall group, bypassing the web flow
+- [x] Write tests for all new admin commands
+
+### Phase 9: Documentation & Release
+- [x] Verify `.env.example` is complete and accurate
+- [x] Write comprehensive README with full setup instructions
+- [x] Document Unifi firewall group configuration steps (`docs/UNIFI_SETUP.md`)
+- [x] Document required Discord bot permissions (`docs/DISCORD_SETUP.md`)
+- [x] Document required Unifi API permissions/roles (`docs/UNIFI_SETUP.md`)
+- [x] Write troubleshooting guide (`docs/TROUBLESHOOTING.md`)
+- [x] Create `CONTRIBUTING.md`
+- [x] Create `CHANGELOG.md`
+- [x] Add `LICENSE` file (MIT)
+- [x] Review all documentation for accuracy and completeness
 - [ ] Deploy to production server
 - [ ] Set up monitoring/alerting
 

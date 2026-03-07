@@ -13,6 +13,7 @@ from discord_modules.commands import setup_commands
 from unifi_modules.client import UnifiClient
 from unifi_modules.firewall import UnifiFirewallManager
 from utils.logger import setup_logger
+from utils.scheduler import start_scheduler, stop_scheduler
 from web.app import create_app, run_web_server
 
 # Set up logger
@@ -56,21 +57,6 @@ async def main():
         bot = initialize_bot()
         logger.info("✅ Discord bot initialized")
 
-        # Set up commands
-        logger.info("Setting up bot commands...")
-        await setup_commands(db)
-        logger.info("✅ Bot commands set up")
-
-        # Initialize and start web server in background thread
-        logger.info("Initializing web server...")
-        loop = asyncio.get_running_loop()
-
-        # Build a sync alert callback that schedules an async bot DM
-        def _alert_callback(ip: str, detail: str) -> None:
-            """Fire-and-forget: schedule admin alert DM on the bot loop."""
-            if bot is not None:
-                asyncio.run_coroutine_threadsafe(bot.send_admin_alert(ip, detail), loop)
-
         # Initialise Unifi firewall manager (best-effort — bot starts even
         # if Unifi is unreachable; login is lazy and happens on first IP add)
         unifi_manager = None
@@ -98,14 +84,34 @@ async def main():
                 exc_info=True,
             )
 
+        # Set up commands (needs unifi_manager for admin commands)
+        logger.info("Setting up bot commands...")
+        await setup_commands(db, unifi_manager=unifi_manager)
+        logger.info("✅ Bot commands set up")
+
+        # Initialize and start web server in background thread
+        logger.info("Initializing web server...")
+        loop = asyncio.get_running_loop()
+
+        # Build a sync alert callback that schedules an async bot DM
+        def _alert_callback(ip: str, detail: str) -> None:
+            """Fire-and-forget: schedule admin alert DM on the bot loop."""
+            if bot is not None:
+                asyncio.run_coroutine_threadsafe(bot.send_admin_alert(ip, detail), loop)
+
         flask_app = create_app(
             db, loop, alert_callback=_alert_callback, unifi_manager=unifi_manager
         )
         run_web_server(flask_app)
         logger.info(f"✅ Web server running at {Config.WEB_BASE_URL}")
 
-        # TODO: Initialize scheduler for cleanup tasks
-        logger.info("Scheduler initialization will be implemented in Phase 4")
+        # Start the background cleanup scheduler
+        start_scheduler(
+            db,
+            loop,
+            unifi_manager=unifi_manager,
+            interval_hours=Config.CLEANUP_INTERVAL_HOURS,
+        )
 
         logger.info("✅ Bot initialization complete")
         logger.info("Starting Discord bot...")
@@ -120,6 +126,8 @@ async def main():
         raise
     finally:
         # Cleanup
+        stop_scheduler()
+
         if db:
             await db.close()
             logger.info("Database connection closed")

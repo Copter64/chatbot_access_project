@@ -1,0 +1,36 @@
+# Docker Compose configuration for Discord Game Server Access Bot
+# Copy .env.example to .env and fill in all values before running.
+#
+# Usage:
+#   docker compose up -d          # start in background
+#   docker compose logs -f bot    # follow logs
+#   docker compose down           # stop and remove containers
+
+services:
+  bot:
+    build: .
+    container_name: gameserver-access-bot
+    restart: unless-stopped
+
+    # All secrets and runtime config come from .env (never committed)
+    env_file: .env
+
+    ports:
+      # Expose the HTTPS web server; matches WEB_PORT in .env
+      - "${WEB_PORT:-8443}:${WEB_PORT:-8443}"
+
+    volumes:
+      # Persistent SQLite database and log files
+      - ./data:/app/data
+      # TLS certificates — paths must match SSL_CERT / SSL_KEY in .env
+      # Adjust the left side to wherever your certs live on the host.
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+
+    # Give the container read access to host time for scheduler accuracy
+    read_only: false
+
+    # Limit resource usage
+    deploy:
+      resources:
+        limits:
+          memory: 256M

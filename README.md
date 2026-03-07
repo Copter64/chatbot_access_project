@@ -111,6 +111,40 @@ Expected startup output:
 ✅ Bot initialization complete
 ```
 
+## Admin Commands
+
+These commands are restricted to Discord user IDs listed in `ADMIN_DISCORD_USER_IDS`.
+
+| Command | Description |
+|---|---|
+| `/request-access` | Generates a unique HTTPS link; opens it to register your IP (requires the configured role) |
+| `/list-ips [user]` | Lists all active firewall IPs. Optionally filter by a specific Discord member |
+| `/remove-ip <ip>` | Removes an IP from both the Unifi firewall group and the database |
+| `/add-ip <ip> <user> [days]` | Manually adds an IP for a user, bypassing the web flow |
+
+## Docker Deployment
+
+```bash
+# Copy and fill in secrets
+cp .env.example .env
+nano .env
+
+# Build and start
+docker compose up -d
+
+# Follow logs
+docker compose logs -f bot
+
+# Stop
+docker compose down
+```
+
+The `docker-compose.yml` mounts:
+- `./data` → `/app/data` for the SQLite database and log file
+- `/etc/letsencrypt` → `/etc/letsencrypt:ro` for TLS certificates
+
+Adjust the cert volume path if your certificates are stored elsewhere.
+
 ## Testing the Bot
 
 See [docs/TESTING_GUIDE.md](docs/TESTING_GUIDE.md) for the full testing guide.
@@ -226,11 +260,19 @@ python3 -m pytest tests/ -v
 - ✅ **Phase 1**: Foundation & Setup — Complete
 - ✅ **Phase 2**: Discord Bot Core — Complete
 - ✅ **Phase 3**: Web Server + TLS — Complete
-- ⏳ **Phase 4**: Unifi Integration — Next
-- ⏳ **Phase 5**: Cleanup & Scheduling — Pending
+- ✅ **Phase 4**: Unifi Integration — Complete
+- ✅ **Phase 5**: Cleanup & Scheduling — Complete
+- ✅ **Phase 6**: Testing — Complete (174 tests passing)
+- ✅ **Phase 7**: Security Hardening — Complete
+- ✅ **Phase 8**: Admin Commands — Complete
+- ✅ **Phase 9**: Documentation & Release — Complete
 
 ## Documentation
 
 - 📖 [Discord Setup Guide](docs/DISCORD_SETUP.md)
+- 📖 [Unifi Setup Guide](docs/UNIFI_SETUP.md)
 - 📖 [Testing Guide](docs/TESTING_GUIDE.md)
+- 📖 [Troubleshooting Guide](docs/TROUBLESHOOTING.md)
+- 📖 [Production Deployment Guide](docs/PRODUCTION_DEPLOY.md)
 - 📖 [Project Outline](PROJECT_OUTLINE.md)
+- 📖 [Changelog](CHANGELOG.md)

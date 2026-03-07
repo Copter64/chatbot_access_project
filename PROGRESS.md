@@ -1,7 +1,7 @@
 # Project Progress Summary
 
-**Last Updated:** March 6, 2026
-**Current Phase:** Phase 4 Complete (Live-Tested) → Phase 5 Next
+**Last Updated:** March 7, 2026
+**Current Phase:** Phase 5 Complete → Phase 6 (Testing / Docker) Next
 
 ---
 
@@ -56,6 +56,18 @@
   - `SatisfactoryServerAccess` WAN_IN rule enabled, protocol set to `all`
   - Port group updated to `7777`, `8888` (removed obsolete 15000/15777)
   - Port forward updated to `7777,8888 tcp_udp`
+
+### Phase 5: IP Cleanup Scheduler (100% Complete)
+- ✅ `database/models.py` — added `get_expired_active_ips()` and `deactivate_ip()`
+- ✅ `utils/scheduler.py` — new module:
+  - `cleanup_expired_ips(db, unifi_manager)` async coroutine: fetches expired rows, removes each from Unifi (best-effort), marks `is_active=0` in DB
+  - `start_scheduler(db, loop, unifi_manager, interval_hours)` — APScheduler `BackgroundScheduler` wired to the main asyncio event loop via `run_coroutine_threadsafe`
+  - `stop_scheduler()` — graceful shutdown
+- ✅ `config.py` — added `CLEANUP_INTERVAL_HOURS` (default 24)
+- ✅ `.env.example` — documented `CLEANUP_INTERVAL_HOURS=24`
+- ✅ `main.py` — scheduler started after web server, stopped in `finally` block
+- ✅ 9 new tests in `tests/test_scheduler.py` (83/83 total passing)
+- ✅ black + flake8 + isort all clean
 
 ---
 
@@ -169,3 +181,170 @@ Players kept timing out (~25 seconds after joining). Investigation via `journalc
   ```
 
 **Status:** 🟢 PHASE 4 FULLY LIVE-TESTED — READY FOR PHASE 5
+
+---
+
+## Phase 5: IP Cleanup Scheduler — 2026-03-07
+
+### What Was Implemented
+
+**`database/models.py`**
+- `get_expired_active_ips()` — queries `ip_addresses` for rows where `is_active = 1 AND expires_at <= CURRENT_TIMESTAMP`, returns list of dicts.
+- `deactivate_ip(ip_id)` — sets `is_active = 0` for the given primary key, returns `bool`.
+
+**`utils/scheduler.py`** (new file)
+- `cleanup_expired_ips(db, unifi_manager)` — async coroutine that processes all expired IPs: removes each from the Unifi firewall group (best-effort; logs error and continues on failure), then deactivates the row in the DB. Returns a summary dict `{removed, skipped, unifi_errors}`.
+- `start_scheduler(db, loop, unifi_manager, interval_hours)` — creates an APScheduler `BackgroundScheduler` with a single interval job. The job uses `asyncio.run_coroutine_threadsafe` to dispatch the cleanup coroutine onto the main event loop (safe because the DB connection and Discord bot share that loop). The scheduler runs as a daemon thread.
+- `stop_scheduler()` — graceful shutdown; safe to call even if scheduler was never started.
+
+**`config.py`** — `CLEANUP_INTERVAL_HOURS: int` (env var, default `24`).
+
+**`.env.example`** — `CLEANUP_INTERVAL_HOURS=24` documented.
+
+**`main.py`** — replaced TODO comment with `start_scheduler(...)` call; `stop_scheduler()` added to `finally` block.
+
+### Tests (`tests/test_scheduler.py` — 9 new tests)
+| Test | Scenario |
+|---|---|
+| `test_no_expired_ips_returns_zero_counts` | No expired IPs → no-op |
+| `test_removes_expired_ips_from_unifi_and_db` | 2 expired IPs → both removed from Unifi + deactivated |
+| `test_unifi_error_still_deactivates_in_db` | Unifi raises exception → DB still updated |
+| `test_no_unifi_manager_deactivates_in_db_only` | `unifi_manager=None` → DB deactivated, no crash |
+| `test_partial_unifi_failure` | 3 IPs, 1 Unifi error → all 3 deactivated in DB |
+| `test_ip_not_found_in_db_counts_as_skipped` | `deactivate_ip` returns False → counted as skipped |
+| `test_start_creates_running_scheduler_with_job` | Scheduler starts, has one job with correct ID |
+| `test_stop_scheduler_shuts_down_cleanly` | Stop doesn't raise |
+| `test_stop_scheduler_noop_when_not_started` | Safe to call when `_scheduler = None` |
+
+**Total: 83/83 tests passing. black + flake8 + isort clean.**
+
+### Live End-to-End Test — Confirmed Working (2026-03-07)
+
+Run via `/tmp/test_cleanup.py` against the production UDM Pro:
+
+```
+[1] Added 192.0.2.1 to Unifi group 'GameServerAccess'          ✅
+[2] Inserted DB row with expires_at = yesterday                 ✅
+[3] cleanup_expired_ips() → {removed: 1, skipped: 0, errors: 0} ✅
+[4] IP removed from Unifi group                                 ✅
+[5] DB row is_active = 0                                        ✅
+🎉 All checks passed
+```
+
+**Status:** 🟢 PHASE 5 COMPLETE — LIVE TESTED
+
+---
+
+## Phase 6 — Testing & Docker
+
+### New Test Files Created
+
+| File | Tests | Coverage |
+|---|---|---|
+| `tests/test_database.py` | 30 | All `Database` CRUD methods (Users, AccessTokens, IPAddresses, RequestHistory) using `:memory:` SQLite |
+| `tests/test_discord_commands.py` | 14 | `has_gameserver_role`, `get_member_in_guild`, `verify_role_access` with full MagicMock isolation |
+| `tests/test_token_generator.py` | 17 | `generate_token`, `generate_access_token`, `is_valid_token_format` — length, charset, uniqueness, edge cases |
+
+**Key fix:** `test_discord_commands.py` patches `Config.GAMESERVER_ROLE_NAME` to "gameserver" so tests are independent of `.env` environment.
+
+### Docker Files Created
+
+- `Dockerfile` — `python:3.12-slim`, non-root `botuser`, layer-cached deps, `/app/data` volume
+- `docker-compose.yml` — `restart: unless-stopped`, `env_file: .env`, `./data:/app/data` + `/etc/letsencrypt` mounts, `${WEB_PORT:-8443}` port mapping, 256MB memory limit
+- `.dockerignore` — excludes `venv/`, `.env`, `data/`, `__pycache__/`, `.git/`
+
+### Final Test Count
+
+**Total: 150/150 tests passing. black + flake8 + isort clean.**
+
+`tests/test_load.py` added (8 tests): concurrent GET/POST under 20 threads, rate-limiter saturation from one IP, different-IP isolation, 50-thread `/health` smoke, concurrent aiosqlite writes with no exceptions.
+
+**Status:** 🟢 PHASE 6 COMPLETE
+
+---
+
+## Phase 7 — Security Hardening
+
+### Scanner Results
+
+| Tool | Result |
+|---|---|
+| `bandit` | 0 issues — 2 false positives suppressed with `# nosec` |
+| `safety` | 0 vulnerabilities across 119 packages |
+
+### False Positives Suppressed
+
+- [config.py](config.py#L41): `# nosec B104` — `WEB_HOST="0.0.0.0"` is intentional for Docker/server deployment
+- [validate_bot.py](validate_bot.py#L34): `# nosec B105` — comparison against placeholder string is detector logic, not a hardcoded credential
+
+### Secrets Audit
+
+- Grepped all source for hardcoded passwords, tokens, IPs — clean
+- All IPs found are in docs, test fixtures, or `.env.example` placeholders
+- `Config.TOKEN_EXPIRATION_MINUTES` defaults to 15 minutes — token TTL was already implemented in Phase 2
+
+**Total: 150/150 tests passing. bandit clean. safety 0 CVEs.**
+
+**Status:** 🟢 PHASE 7 COMPLETE
+
+---
+
+## Phase 8 — Admin Commands
+
+### New Slash Commands
+
+| Command | Description |
+|---|---|
+| `/list-ips` | Admin-only. Lists all active firewall IPs (optional `user` filter). Truncates at 20 entries. |
+| `/remove-ip` | Admin-only. Removes an IP from Unifi and marks it inactive in the DB. |
+| `/add-ip` | Admin-only. Manually adds an IP for a user, bypassing the web flow. |
+
+All three commands:
+- Gate on `Config.ADMIN_DISCORD_USER_IDS` (returns ❌ to non-admins)
+- Validate IP address format via `_validate_ip()` before any DB/Unifi call
+- Run Unifi calls via `asyncio.run_in_executor` to avoid blocking the event loop
+- Degrade gracefully when `unifi_manager=None` (DB-only update with clear message)
+
+### Supporting Changes
+
+- `database/models.py`: added `get_all_active_ips()` (JOIN with users) and `get_active_ip_by_address()`
+- `discord_modules/commands.py`: added `is_admin()` and `_validate_ip()` module-level helpers; updated `setup_commands(db, unifi_manager=None)` signature
+- `main.py`: moved Unifi initialisation **before** `setup_commands` so `unifi_manager` is available; passes it in
+- Fixed two `datetime.utcnow()` deprecation warnings → `datetime.now(timezone.utc).replace(tzinfo=None)`
+
+### Tests
+
+`tests/test_admin_commands.py` — 24 tests across 5 classes:
+- `TestIsAdmin`, `TestValidateIp` — module-level helpers
+- `TestListIps`, `TestRemoveIp`, `TestAddIp` — admin check, invalid inputs, success with/without Unifi, edge cases
+
+**Total: 174/174 tests passing. flake8 clean.**
+
+**Status:** 🟢 PHASE 8 COMPLETE
+
+---
+
+## Phase 9 — Documentation & Release
+
+### Files Created
+
+| File | Description |
+|---|---|
+| `docs/UNIFI_SETUP.md` | Step-by-step: API user, firewall group, WAN_IN rule, port forwards, verification |
+| `docs/TROUBLESHOOTING.md` | Organised by category: bot startup, web server, Discord commands, Unifi, database |
+| `CONTRIBUTING.md` | Dev setup, pre-commit hooks, code standards, module boundaries, secrets policy |
+| `CHANGELOG.md` | Keep-a-Changelog format, v1.0.0 entry covering all 9 phases |
+| `LICENSE` | MIT, Copyright 2026 Copter64 |
+| `docs/PRODUCTION_DEPLOY.md` | Step-by-step: Proxmox VM creation, Docker install, cert migration, DB migration, UDM Pro port-forward update, rollback procedure |
+
+### README.md Updates
+- Added **Admin Commands** section (all 4 slash commands)
+- Added **Docker Deployment** section with `docker compose` quickstart
+- Updated **Current Status** to show all 9 phases complete
+- Updated **Documentation** links list to include new guides
+
+### Remaining (operational, not code)
+- Follow `docs/PRODUCTION_DEPLOY.md` to deploy on Proxmox VM
+- Set up monitoring/alerting (e.g. UptimeRobot pinging `/health`)
+
+**Status:** 🟢 PHASE 9 COMPLETE — ALL DEVELOPMENT PHASES DONE

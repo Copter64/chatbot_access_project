@@ -38,7 +38,7 @@ class Config:
 
     # Web Server Configuration
     WEB_PORT: int = int(os.getenv("WEB_PORT", "8080"))
-    WEB_HOST: str = os.getenv("WEB_HOST", "0.0.0.0")
+    WEB_HOST: str = os.getenv("WEB_HOST", "0.0.0.0")  # nosec B104
     WEB_BASE_URL: str = os.getenv("WEB_BASE_URL", f"http://localhost:{WEB_PORT}")
 
     # Database Configuration
@@ -58,14 +58,15 @@ class Config:
     RATE_LIMIT_REQUESTS: int = int(os.getenv("RATE_LIMIT_REQUESTS", "1"))
     RATE_LIMIT_PERIOD_MINUTES: int = int(os.getenv("RATE_LIMIT_PERIOD_MINUTES", "5"))
 
+    # Cleanup Scheduler
+    CLEANUP_INTERVAL_HOURS: int = int(os.getenv("CLEANUP_INTERVAL_HOURS", "24"))
+
     # Web Security
     WEB_RATE_LIMIT_REQUESTS: int = int(os.getenv("WEB_RATE_LIMIT_REQUESTS", "30"))
     WEB_RATE_LIMIT_WINDOW_SECONDS: int = int(
         os.getenv("WEB_RATE_LIMIT_WINDOW_SECONDS", "60")
     )
-    WEB_BRUTE_FORCE_THRESHOLD: int = int(
-        os.getenv("WEB_BRUTE_FORCE_THRESHOLD", "10")
-    )
+    WEB_BRUTE_FORCE_THRESHOLD: int = int(os.getenv("WEB_BRUTE_FORCE_THRESHOLD", "10"))
     # Comma-separated Discord user IDs to DM on security alerts
     ADMIN_DISCORD_USER_IDS: list[int] = [
         int(x.strip())

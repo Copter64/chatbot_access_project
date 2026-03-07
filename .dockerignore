@@ -1,0 +1,30 @@
+# Virtual environment — deps are installed fresh inside the image
+venv/
+.venv/
+
+# Secrets — never bake into the image
+.env
+
+# Runtime data — mounted as a volume
+data/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+
+# Version control
+.git/
+.gitignore
+
+# Editor
+.vscode/
+*.swp
+
+# Logs
+*.log

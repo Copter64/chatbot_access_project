@@ -31,7 +31,7 @@ def check_bot_token():
         logger.error("❌ DISCORD_BOT_TOKEN is not set in .env")
         return False
 
-    if Config.DISCORD_BOT_TOKEN == "your_discord_bot_token_here":
+    if Config.DISCORD_BOT_TOKEN == "your_discord_bot_token_here":  # nosec B105
         logger.error("❌ DISCORD_BOT_TOKEN is still set to placeholder value")
         logger.info("   Get your bot token from:")
         logger.info("   https://discord.com/developers/applications")

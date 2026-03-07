@@ -394,6 +394,93 @@ class Database:
             )
             await self.connection.commit()
 
+    async def get_expired_active_ips(self) -> list:
+        """Return all IP records that are active but have passed expiry.
+
+        Returns:
+            list[dict]: Each dict contains at minimum ``id``,
+                ``user_id``, ``ip_address``, and ``expires_at``.
+        """
+        if not self.connection:
+            await self.connect()
+
+        async with self.connection.cursor() as cursor:
+            await cursor.execute("""
+                SELECT * FROM ip_addresses
+                WHERE is_active = 1 AND expires_at <= CURRENT_TIMESTAMP
+                ORDER BY expires_at ASC
+            """)
+            rows = await cursor.fetchall()
+            return [dict(row) for row in rows]
+
+    async def deactivate_ip(self, ip_id: int) -> bool:
+        """Mark a specific IP address record as inactive.
+
+        Args:
+            ip_id: Primary key of the ``ip_addresses`` row.
+
+        Returns:
+            bool: ``True`` if the row was updated, ``False`` if not found.
+        """
+        if not self.connection:
+            await self.connect()
+
+        async with self.connection.cursor() as cursor:
+            await cursor.execute(
+                "UPDATE ip_addresses SET is_active = 0 WHERE id = ?",
+                (ip_id,),
+            )
+            await self.connection.commit()
+            return cursor.rowcount > 0
+
+    async def get_all_active_ips(self) -> list:
+        """Return all currently active IP records joined with user info.
+
+        Returns:
+            list[dict]: Each dict contains ``id``, ``ip_address``,
+                ``expires_at``, ``user_id``, ``discord_id``,
+                and ``discord_username``.
+        """
+        if not self.connection:
+            await self.connect()
+
+        async with self.connection.cursor() as cursor:
+            await cursor.execute("""
+                SELECT i.id, i.ip_address, i.expires_at, i.user_id,
+                       u.discord_id, u.discord_username
+                FROM ip_addresses i
+                JOIN users u ON u.id = i.user_id
+                WHERE i.is_active = 1 AND i.expires_at > CURRENT_TIMESTAMP
+                ORDER BY i.expires_at ASC
+            """)
+            rows = await cursor.fetchall()
+            return [dict(row) for row in rows]
+
+    async def get_active_ip_by_address(self, ip_address: str) -> Optional[dict]:
+        """Find the first active IP record matching *ip_address*.
+
+        Args:
+            ip_address: The IP string to look up.
+
+        Returns:
+            dict or None: IP record if found and active, otherwise None.
+        """
+        if not self.connection:
+            await self.connect()
+
+        async with self.connection.cursor() as cursor:
+            await cursor.execute(
+                """
+                SELECT * FROM ip_addresses
+                WHERE ip_address = ? AND is_active = 1
+                ORDER BY expires_at DESC
+                LIMIT 1
+                """,
+                (ip_address,),
+            )
+            row = await cursor.fetchone()
+            return dict(row) if row else None
+
     async def get_recent_requests(
         self, user_id: int, request_type: str, minutes: int
     ) -> int:
