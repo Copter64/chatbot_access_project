@@ -96,6 +96,8 @@ data/                   # Runtime data (SQLite DB, logs) — gitignored
 
 ## Git & Pre-commit Hooks
 
+**Never run `git commit` or `git push` autonomously.** The user reviews all diffs before committing. Stage files with `git add` if helpful, but always stop there and let the user commit and push manually.
+
 The following pre-commit hooks must pass before every commit:
 - `black` — code formatting
 - `flake8` — linting
@@ -117,10 +119,8 @@ When moving the bot to a new host or container:
 
 2. **Test Docker locally before deploying remotely** — run `docker compose up -d --build` on the dev machine first and verify `{"status":"ok"}` from the `/health` endpoint before touching the production host.
 
-3. **Check container user permissions before first run** — the container runs as `botuser` (UID 999). Ensure:
-   - `/etc/letsencrypt/live` and `/etc/letsencrypt/archive` are readable by UID 999 (use `setfacl -m u:999:rx`)
-   - `./data/` is owned by UID 999 (`chown -R 999:999 data/`)
+3. **Check container user permissions before first run** — the container runs as a non-root user. Ensure cert files and the `./data/` directory are readable/writable by that user. Use ACLs (`setfacl`) on cert directories rather than weakening base permissions.
 
-4. **Migrate the database before starting** — copy `data/gameserver_access.db` to the new host before the first `docker compose up` to preserve existing IP records.
+4. **Migrate the database before starting** — copy the SQLite database file to the new host before the first `docker compose up` to preserve existing records.
 
-5. **Update port forwards on UDM Pro** — change the internal IP for port 8443 to the new host's LAN IP before cutting over traffic.
+5. **Update network routing** — update any port forwards or firewall rules pointing to the old host's LAN IP to point to the new host before cutting over traffic.
