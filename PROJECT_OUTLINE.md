@@ -178,7 +178,7 @@ A Python-based Discord bot that allows users with the "gameserver" role to reque
 - [x] Create `CHANGELOG.md`
 - [x] Add `LICENSE` file (MIT)
 - [x] Review all documentation for accuracy and completeness
-- [ ] Deploy to production server
+- [x] Deploy to production server
 - [ ] Set up monitoring/alerting
 
 ---
@@ -243,17 +243,6 @@ SECRET_KEY=your_random_secret_key
 9. **Logging**: Log security events but sanitize sensitive data
 
 ---
-
-## Additional Features (Future Enhancements)
-
-- [ ] Dashboard showing current active IPs per user
-- [ ] Manual IP entry command for advanced users
-- [ ] Extend access command (restart 30-day timer)
-- [ ] Multiple game server support
-- [ ] Audit log of all access grants/removals
-- [ ] Email notifications (optional)
-- [ ] IP geolocation display
-- [ ] Admin dashboard web interface
 
 ---
 
@@ -354,6 +343,27 @@ chatbot_access_project/
 3. Create Discord bot application and get token
 4. Begin Phase 1 implementation
 5. Iterate and test each phase
+
+---
+
+## Future Enhancements
+
+### Features
+- [ ] Refresh expiry timer if the IP has connected to the firewall within the last 30 days (detect recent activity via Unifi logs)
+- [ ] Discord channel log sink — forward bot log messages to a dedicated Discord channel with a corresponding role
+- [ ] Send Discord DM warning 3 days before IP access expires
+- [ ] `/server-health` slash command — report game server status from within Discord
+- [ ] `/request-gamesave` slash command — allow users to request a game save from Discord
+- [ ] Extend access command — restart the 30-day timer without a new IP capture
+- [ ] Multiple game server support — manage access to more than one server
+- [ ] Admin dashboard web interface
+- [ ] Audit log of all access grants and removals
+- [ ] Dashboard showing current active IPs per user
+- [ ] IP geolocation display
+- [ ] Email notifications (optional)
+
+### Bug Fixes
+- [ ] Reject RFC 1918 private IP addresses — only accept publicly routable IPs when capturing user addresses
 
 ---
 

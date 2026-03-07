@@ -344,7 +344,7 @@ All three commands:
 - Updated **Documentation** links list to include new guides
 
 ### Remaining (operational, not code)
-- Follow `docs/PRODUCTION_DEPLOY.md` to deploy on Proxmox VM
+- ~~Follow `docs/PRODUCTION_DEPLOY.md` to deploy on Proxmox VM~~ ✅ Done — bot running on Docker VM at 192.168.1.53, workflow end-to-end verified
 - Set up monitoring/alerting (e.g. UptimeRobot pinging `/health`)
 
 **Status:** 🟢 PHASE 9 COMPLETE — ALL DEVELOPMENT PHASES DONE
