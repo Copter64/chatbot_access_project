@@ -60,8 +60,8 @@ fi
 # ---------------------------------------------------------------------------
 # 3. Install git & certbot
 # ---------------------------------------------------------------------------
-info "Installing git and certbot..."
-sudo apt-get install -y -qq git certbot
+info "Installing git, certbot and acl..."
+sudo apt-get install -y -qq git certbot acl
 
 # ---------------------------------------------------------------------------
 # 4. Clone repository
@@ -81,6 +81,9 @@ cd "$INSTALL_DIR"
 # ---------------------------------------------------------------------------
 info "Creating data directory..."
 mkdir -p data
+# Container runs as botuser (UID 999) — ensure it can write to the data dir
+sudo chown -R 999:999 data/
+info "Data directory ownership set to UID 999 (botuser)."
 
 # ---------------------------------------------------------------------------
 # 6. TLS certificates
@@ -131,6 +134,22 @@ fi
 # Enable certbot auto-renewal timer
 if systemctl list-units --type=service | grep -q "certbot"; then
     sudo systemctl enable --now certbot.timer 2>/dev/null || true
+fi
+
+# ---------------------------------------------------------------------------
+# 6b. Fix cert permissions for Docker container (botuser = UID 999)
+# ---------------------------------------------------------------------------
+# The container runs as botuser (UID 999). The letsencrypt dirs are root:root
+# or root:user with 750/640 permissions — botuser has no access by default.
+# Use POSIX ACLs to grant read access without weakening the base permissions.
+if [ -d "/etc/letsencrypt/live/${CERT_DOMAIN}" ]; then
+    info "Granting container user (UID 999) read access to certs via ACL..."
+    sudo setfacl -R -m u:999:rx \
+        /etc/letsencrypt/live \
+        /etc/letsencrypt/archive
+    sudo setfacl -R -m u:999:r \
+        "/etc/letsencrypt/archive/${CERT_DOMAIN}/"
+    info "Cert ACLs applied."
 fi
 
 # ---------------------------------------------------------------------------
