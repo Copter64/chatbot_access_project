@@ -50,11 +50,15 @@ if ! groups "$USER" | grep -qw docker; then
     info "Adding $USER to the docker group..."
     sudo usermod -aG docker "$USER"
     ADDED_TO_DOCKER_GROUP=true
-    # Group change requires a new login to take effect for interactive use;
-    # use sudo docker for the remainder of this script run.
-    DOCKER_CMD="sudo docker"
-else
+fi
+
+# Test whether docker is actually accessible in this session (group change
+# requires a new login to take effect even if usermod already ran).
+if docker info &>/dev/null 2>&1; then
     DOCKER_CMD="docker"
+else
+    # Fall back to sudo for this run — user must run 'newgrp docker' afterward
+    DOCKER_CMD="sudo docker"
 fi
 
 # ---------------------------------------------------------------------------
