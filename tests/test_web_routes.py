@@ -133,22 +133,34 @@ class TestCheckIpGet:
 
     def test_expired_or_missing_token_returns_410(self, client_no_token):
         """Valid format token that is not in DB should return 410."""
-        response = client_no_token.get("/check-ip/" + VALID_TOKEN)
+        response = client_no_token.get(
+            "/check-ip/" + VALID_TOKEN,
+            environ_base={"REMOTE_ADDR": "8.8.8.8"},
+        )
         assert response.status_code == 410
 
     def test_valid_token_returns_200(self, client_valid_token):
         """Valid, unexpired, unused token should return 200."""
-        response = client_valid_token.get("/check-ip/" + VALID_TOKEN)
+        response = client_valid_token.get(
+            "/check-ip/" + VALID_TOKEN,
+            environ_base={"REMOTE_ADDR": "8.8.8.8"},
+        )
         assert response.status_code == 200
 
     def test_valid_token_page_contains_confirm_button(self, client_valid_token):
         """Check-ip page must contain a confirm button."""
-        response = client_valid_token.get("/check-ip/" + VALID_TOKEN)
+        response = client_valid_token.get(
+            "/check-ip/" + VALID_TOKEN,
+            environ_base={"REMOTE_ADDR": "8.8.8.8"},
+        )
         assert b"Confirm" in response.data
 
     def test_valid_token_page_contains_form(self, client_valid_token):
         """Check-ip page must contain a form POSTing to confirm-ip."""
-        response = client_valid_token.get("/check-ip/" + VALID_TOKEN)
+        response = client_valid_token.get(
+            "/check-ip/" + VALID_TOKEN,
+            environ_base={"REMOTE_ADDR": "8.8.8.8"},
+        )
         assert b"/confirm-ip/" in response.data
 
 
@@ -167,13 +179,18 @@ class TestConfirmIpPost:
 
     def test_expired_token_returns_410(self, client_no_token):
         """Confirm on an expired/missing token should return 410."""
-        response = client_no_token.post("/confirm-ip/" + VALID_TOKEN)
+        response = client_no_token.post(
+            "/confirm-ip/" + VALID_TOKEN,
+            environ_base={"REMOTE_ADDR": "8.8.8.8"},
+        )
         assert response.status_code == 410
 
     def test_valid_token_redirects_to_success(self, client_valid_token):
         """Valid token confirm should redirect to /success."""
         response = client_valid_token.post(
-            "/confirm-ip/" + VALID_TOKEN, follow_redirects=False
+            "/confirm-ip/" + VALID_TOKEN,
+            follow_redirects=False,
+            environ_base={"REMOTE_ADDR": "8.8.8.8"},
         )
         assert response.status_code == 302
         assert "success" in response.headers["Location"]
@@ -181,16 +198,87 @@ class TestConfirmIpPost:
     def test_success_redirect_includes_ip(self, client_valid_token):
         """Success redirect must include ip query parameter."""
         response = client_valid_token.post(
-            "/confirm-ip/" + VALID_TOKEN, follow_redirects=False
+            "/confirm-ip/" + VALID_TOKEN,
+            follow_redirects=False,
+            environ_base={"REMOTE_ADDR": "8.8.8.8"},
         )
         assert "ip=" in response.headers["Location"]
 
     def test_success_redirect_includes_expires(self, client_valid_token):
         """Success redirect must include expires query parameter."""
         response = client_valid_token.post(
-            "/confirm-ip/" + VALID_TOKEN, follow_redirects=False
+            "/confirm-ip/" + VALID_TOKEN,
+            follow_redirects=False,
+            environ_base={"REMOTE_ADDR": "8.8.8.8"},
         )
         assert "expires=" in response.headers["Location"]
+
+
+# ---------------------------------------------------------------------------
+# Private / non-routable IP rejection
+# ---------------------------------------------------------------------------
+
+
+class TestPrivateIpRejection:
+    """GET /check-ip and POST /confirm-ip must reject RFC 1918 and loopback IPs."""
+
+    PRIVATE_IPS = [
+        "127.0.0.1",        # loopback
+        "10.0.0.1",         # RFC 1918 class A
+        "172.16.0.1",       # RFC 1918 class B
+        "192.168.1.100",    # RFC 1918 class C
+        "169.254.0.1",      # link-local
+    ]
+
+    def test_check_ip_rejects_loopback(self, client_valid_token):
+        """GET /check-ip must return 400 for loopback addresses."""
+        response = client_valid_token.get(
+            "/check-ip/" + VALID_TOKEN,
+            environ_base={"REMOTE_ADDR": "127.0.0.1"},
+        )
+        assert response.status_code == 400
+
+    def test_check_ip_rejects_rfc1918(self, client_valid_token):
+        """GET /check-ip must return 400 for RFC 1918 private addresses."""
+        for ip in ("10.0.0.1", "172.16.0.1", "192.168.1.100"):
+            response = client_valid_token.get(
+                "/check-ip/" + VALID_TOKEN,
+                environ_base={"REMOTE_ADDR": ip},
+            )
+            assert response.status_code == 400, f"Expected 400 for {ip}"
+
+    def test_check_ip_rejects_link_local(self, client_valid_token):
+        """GET /check-ip must return 400 for link-local addresses."""
+        response = client_valid_token.get(
+            "/check-ip/" + VALID_TOKEN,
+            environ_base={"REMOTE_ADDR": "169.254.0.1"},
+        )
+        assert response.status_code == 400
+
+    def test_confirm_ip_rejects_loopback(self, client_valid_token):
+        """POST /confirm-ip must return 400 for loopback addresses."""
+        response = client_valid_token.post(
+            "/confirm-ip/" + VALID_TOKEN,
+            environ_base={"REMOTE_ADDR": "127.0.0.1"},
+        )
+        assert response.status_code == 400
+
+    def test_confirm_ip_rejects_rfc1918(self, client_valid_token):
+        """POST /confirm-ip must return 400 for RFC 1918 private addresses."""
+        for ip in ("10.0.0.1", "172.16.0.1", "192.168.1.100"):
+            response = client_valid_token.post(
+                "/confirm-ip/" + VALID_TOKEN,
+                environ_base={"REMOTE_ADDR": ip},
+            )
+            assert response.status_code == 400, f"Expected 400 for {ip}"
+
+    def test_private_ip_error_page_content(self, client_valid_token):
+        """Private IP rejection must display a descriptive error message."""
+        response = client_valid_token.get(
+            "/check-ip/" + VALID_TOKEN,
+            environ_base={"REMOTE_ADDR": "192.168.1.1"},
+        )
+        assert b"Private IP" in response.data or b"private" in response.data.lower()
 
 
 # ---------------------------------------------------------------------------
@@ -296,18 +384,18 @@ class TestWebRateLimiting:
         """After exceeding the per-IP limit /check-ip should return 429."""
         app = _make_app(event_loop_thread, rate_limit=2)
         with app.test_client() as client:
-            client.get(f"/check-ip/{VALID_TOKEN}")
-            client.get(f"/check-ip/{VALID_TOKEN}")
-            response = client.get(f"/check-ip/{VALID_TOKEN}")
+            client.get(f"/check-ip/{VALID_TOKEN}", environ_base={"REMOTE_ADDR": "8.8.8.8"})
+            client.get(f"/check-ip/{VALID_TOKEN}", environ_base={"REMOTE_ADDR": "8.8.8.8"})
+            response = client.get(f"/check-ip/{VALID_TOKEN}", environ_base={"REMOTE_ADDR": "8.8.8.8"})
         assert response.status_code == 429
 
     def test_confirm_ip_returns_429_when_rate_limited(self, event_loop_thread):
         """After exceeding the per-IP limit /confirm-ip should return 429."""
         app = _make_app(event_loop_thread, rate_limit=2)
         with app.test_client() as client:
-            client.post(f"/confirm-ip/{VALID_TOKEN}")
-            client.post(f"/confirm-ip/{VALID_TOKEN}")
-            response = client.post(f"/confirm-ip/{VALID_TOKEN}")
+            client.post(f"/confirm-ip/{VALID_TOKEN}", environ_base={"REMOTE_ADDR": "8.8.8.8"})
+            client.post(f"/confirm-ip/{VALID_TOKEN}", environ_base={"REMOTE_ADDR": "8.8.8.8"})
+            response = client.post(f"/confirm-ip/{VALID_TOKEN}", environ_base={"REMOTE_ADDR": "8.8.8.8"})
         assert response.status_code == 429
 
     def test_health_not_rate_limited(self, event_loop_thread):
@@ -322,6 +410,6 @@ class TestWebRateLimiting:
         """429 response should render an informative error page."""
         app = _make_app(event_loop_thread, rate_limit=1)
         with app.test_client() as client:
-            client.get(f"/check-ip/{VALID_TOKEN}")
-            response = client.get(f"/check-ip/{VALID_TOKEN}")
+            client.get(f"/check-ip/{VALID_TOKEN}", environ_base={"REMOTE_ADDR": "8.8.8.8"})
+            response = client.get(f"/check-ip/{VALID_TOKEN}", environ_base={"REMOTE_ADDR": "8.8.8.8"})
         assert b"Too Many Requests" in response.data
