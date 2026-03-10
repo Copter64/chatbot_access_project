@@ -99,7 +99,7 @@ class TestConcurrentCheckIp:
             with app.test_client() as client:
                 return client.get(
                     f"/check-ip/{VALID_TOKEN}",
-                    environ_base={"REMOTE_ADDR": "203.0.113.1"},
+                    environ_base={"REMOTE_ADDR": "8.8.8.8"},
                 ).status_code
 
         statuses = _run_concurrent(request)
@@ -113,7 +113,7 @@ class TestConcurrentCheckIp:
             with app.test_client() as client:
                 return client.get(
                     f"/check-ip/{VALID_TOKEN}",
-                    environ_base={"REMOTE_ADDR": "203.0.113.1"},
+                    environ_base={"REMOTE_ADDR": "8.8.8.8"},
                 ).status_code
 
         statuses = _run_concurrent(request)
@@ -196,7 +196,7 @@ class TestRateLimiterUnderLoad:
             with app.test_client() as client:
                 return client.get(
                     f"/check-ip/{VALID_TOKEN}",
-                    environ_base={"REMOTE_ADDR": "198.51.100.1"},
+                    environ_base={"REMOTE_ADDR": "8.8.8.8"},
                 ).status_code
 
         # Fire sequentially from the same IP so the counter accumulates
@@ -219,14 +219,14 @@ class TestRateLimiterUnderLoad:
             for _ in range(limit + 5):
                 client.get(
                     f"/check-ip/{VALID_TOKEN}",
-                    environ_base={"REMOTE_ADDR": "198.51.100.10"},
+                    environ_base={"REMOTE_ADDR": "8.8.8.8"},
                 )
 
         # IP B should still be allowed
         with app.test_client() as client:
             resp = client.get(
                 f"/check-ip/{VALID_TOKEN}",
-                environ_base={"REMOTE_ADDR": "198.51.100.20"},
+                environ_base={"REMOTE_ADDR": "1.1.1.1"},
             )
         assert resp.status_code == 200
 

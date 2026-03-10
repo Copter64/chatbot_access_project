@@ -136,10 +136,10 @@ class TestValidateIp:
     """Tests for the _validate_ip() helper."""
 
     def test_valid_ipv4(self):
-        assert _validate_ip("203.0.113.42") is True
+        assert _validate_ip("8.8.8.8") is True
 
     def test_valid_ipv6(self):
-        assert _validate_ip("2001:db8::1") is True
+        assert _validate_ip("2001:4860:4860::8888") is True
 
     def test_invalid_string(self):
         assert _validate_ip("not-an-ip") is False

@@ -294,20 +294,7 @@ chatbot_access_project/
 
 ---
 
-## Next Steps
-
-1. Review this outline and confirm approach
-2. Set up Unifi API access on UDM Pro
-3. Create Discord bot application and get token
-4. Begin Phase 1 implementation
-5. Iterate and test each phase
-
----
-
 ## Future Enhancements
-
-### Bug Fixes
-- [ ] Reject RFC 1918 private IP addresses — only accept publicly routable IPs when capturing user addresses
 
 ### Features
 - [ ] Send Discord DM warning 3 days before IP access expires — prevents users getting locked out unexpectedly

@@ -56,6 +56,25 @@ def _get_client_ip() -> str:
     return request.remote_addr or "unknown"
 
 
+def _is_public_ip(ip_str: str) -> bool:
+    """Return True if *ip_str* is a publicly routable IP address.
+
+    Rejects RFC 1918 private addresses (10.x, 172.16-31.x, 192.168.x),
+    loopback (127.x / ::1), link-local (169.254.x), and all other
+    non-globally-routable ranges.
+
+    Args:
+        ip_str: IP address string to check.
+
+    Returns:
+        bool: True if the address is globally routable, False otherwise.
+    """
+    try:
+        return ipaddress.ip_address(ip_str).is_global
+    except ValueError:
+        return False
+
+
 def _security():
     """Return the SecurityManager from the current app config."""
     return current_app.config["SECURITY"]
@@ -102,6 +121,22 @@ def check_ip(token: str):
     """
     client_ip = _get_client_ip()
     logger.info(f"GET /check-ip/{token[:8]}... from {client_ip}")
+
+    # Reject RFC 1918 / non-routable IPs — only public addresses are useful
+    if not _is_public_ip(client_ip):
+        logger.warning(f"Non-public IP rejected on check-ip: {client_ip!r}")
+        return (
+            render_template(
+                "error.html",
+                error_title="Private IP Address Detected",
+                error_message=(
+                    "Your detected IP address is from a private or "
+                    "non-routable network. Please connect from a publicly "
+                    "routable IP address and try again."
+                ),
+            ),
+            400,
+        )
 
     # Per-IP rate limit check
     if _security().is_rate_limited(client_ip):
@@ -193,6 +228,22 @@ def confirm_ip(token: str):
     """
     client_ip = _get_client_ip()
     logger.info(f"POST /confirm-ip/{token[:8]}... from {client_ip}")
+
+    # Reject RFC 1918 / non-routable IPs — only public addresses are useful
+    if not _is_public_ip(client_ip):
+        logger.warning(f"Non-public IP rejected on confirm-ip: {client_ip!r}")
+        return (
+            render_template(
+                "error.html",
+                error_title="Private IP Address Detected",
+                error_message=(
+                    "Your detected IP address is from a private or "
+                    "non-routable network. Please connect from a publicly "
+                    "routable IP address and try again."
+                ),
+            ),
+            400,
+        )
 
     # Per-IP rate limit check
     if _security().is_rate_limited(client_ip):

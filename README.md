@@ -13,7 +13,120 @@ adding them to Unifi firewall rules.
 - 📝 Comprehensive audit logging
 - 🛡️ PEP 8 compliant, secure code
 
-## Quick Start
+---
+
+## Deployment (Docker — Recommended)
+
+### Automated Bootstrap
+
+The easiest way to deploy on a fresh Ubuntu 24.04 VM:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Copter64/chatbot_access_project/master/deploy.sh | bash
+```
+
+This script installs Docker, clones the repo, sets cert permissions, prompts you
+to fill in `.env`, builds the image, and starts the container.
+
+---
+
+### Manual Docker Steps
+
+#### 1. Prerequisites
+
+- Docker + Docker Compose (`curl -fsSL https://get.docker.com | sudo sh`)
+- TLS certificate (Let's Encrypt — see [TLS Certificate](#tls-certificate) below)
+- `.env` file filled in (copy from `.env.example`)
+
+#### 2. Initial Setup
+
+```bash
+# Clone the repo
+git clone https://github.com/Copter64/chatbot_access_project.git
+cd chatbot_access_project
+
+# Create and fill in the environment file
+cp .env.example .env
+nano .env
+```
+
+#### 3. Cert Permissions for the Container
+
+The container runs as `botuser` (UID 999). Grant it read access to the Let's
+Encrypt directory without loosening the base permissions:
+
+```bash
+sudo setfacl -R -m u:999:rx /etc/letsencrypt/live /etc/letsencrypt/archive
+sudo setfacl -R -m u:999:r  /etc/letsencrypt/archive/yourdomain.com/
+```
+
+#### 4. Data Directory Ownership
+
+The container writes the SQLite database and log file to `./data`:
+
+```bash
+mkdir -p data
+sudo chown -R 999:999 data/
+```
+
+#### 5. Build and Start
+
+```bash
+docker compose up -d
+```
+
+#### 6. Verify
+
+```bash
+# Check container is running
+docker compose ps
+
+# Tail live logs
+docker compose logs -f bot
+
+# Health check (replace 8443 with WEB_PORT if different)
+curl -sk https://localhost:8443/health
+```
+
+---
+
+### Common Docker Operations
+
+| Task | Command |
+|---|---|
+| Start | `docker compose up -d` |
+| Stop | `docker compose down` |
+| Restart | `docker compose restart bot` |
+| Tail logs | `docker compose logs -f bot` |
+| **Update code + rebuild** | `git pull && docker compose up -d --build` |
+| Rebuild image only | `docker compose build` |
+| Open a shell in the container | `docker compose exec bot bash` |
+| View resource usage | `docker stats` |
+
+> **After any code change** you must rebuild the image — the source is baked in
+> at build time. Use `docker compose up -d --build` to rebuild and restart in
+> one step.
+
+---
+
+### TLS Certificate
+
+```bash
+sudo apt install certbot acl
+sudo certbot certonly --manual --preferred-challenges dns -d yourdomain.com
+# Add the _acme-challenge TXT record to your DNS when prompted
+```
+
+After obtaining certs, apply the ACLs described in step 3 above. Renew with:
+
+```bash
+sudo certbot renew --manual --preferred-challenges dns
+# Then re-apply ACLs and restart: docker compose restart bot
+```
+
+---
+
+## Local / Development Setup
 
 ### 1. Prerequisites
 
@@ -25,7 +138,6 @@ adding them to Unifi firewall rules.
 ### 2. Installation
 
 ```bash
-# Clone the repository
 cd chatbot_access_project
 
 # Create and activate virtual environment
@@ -39,10 +151,7 @@ pip install -r requirements-dev.txt
 ### 3. Configuration
 
 ```bash
-# Copy example environment file
 cp .env.example .env
-
-# Edit .env with your values
 nano .env
 ```
 
@@ -60,23 +169,7 @@ Required configuration:
 
 See [docs/DISCORD_SETUP.md](docs/DISCORD_SETUP.md) for detailed Discord setup instructions.
 
-### 4. TLS Certificate (Let's Encrypt)
-
-```bash
-sudo apt install certbot
-sudo certbot certonly --manual --preferred-challenges dns -d yourdomain.com
-# Add the _acme-challenge TXT record to your DNS when prompted
-```
-
-Grant the bot user read access to the certs:
-
-```bash
-sudo chown -R root:YOUR_USER /etc/letsencrypt/live/ /etc/letsencrypt/archive/
-sudo chmod 750 /etc/letsencrypt/live/ /etc/letsencrypt/archive/
-sudo chmod 640 /etc/letsencrypt/archive/yourdomain.com/*.pem
-```
-
-### 5. Network / Firewall Setup
+### 4. Network / Firewall Setup
 
 For external users to reach the web server:
 
@@ -91,7 +184,7 @@ For external users to reach the web server:
    - Use DDNS (UDM Pro has a built-in client) to keep it updated if your ISP IP changes
    - Internal DNS override (split-horizon) pointing to the LAN IP is fine for local users
 
-### 6. Run the Bot
+### 5. Run the Bot
 
 ```bash
 # Foreground (development)
@@ -122,28 +215,7 @@ These commands are restricted to Discord user IDs listed in `ADMIN_DISCORD_USER_
 | `/remove-ip <ip>` | Removes an IP from both the Unifi firewall group and the database |
 | `/add-ip <ip> <user> [days]` | Manually adds an IP for a user, bypassing the web flow |
 
-## Docker Deployment
-
-```bash
-# Copy and fill in secrets
-cp .env.example .env
-nano .env
-
-# Build and start
-docker compose up -d
-
-# Follow logs
-docker compose logs -f bot
-
-# Stop
-docker compose down
-```
-
-The `docker-compose.yml` mounts:
-- `./data` → `/app/data` for the SQLite database and log file
-- `/etc/letsencrypt` → `/etc/letsencrypt:ro` for TLS certificates
-
-Adjust the cert volume path if your certificates are stored elsewhere.
+---
 
 ## Testing the Bot
 
@@ -156,7 +228,7 @@ See [docs/TESTING_GUIDE.md](docs/TESTING_GUIDE.md) for the full testing guide.
 3. User opens the link — sees their external IP
 4. User clicks **Confirm Access**
 5. IP is saved to the database (valid for 30 days)
-6. *(Phase 4)* IP is automatically added to the Unifi firewall group
+6. IP is automatically added to the Unifi firewall group
 
 **Testing from outside your network:**
 Use a phone on **mobile data** (WiFi off) to simulate an external user. LAN users will see their internal IP, which is also valid for LAN-only use cases.
@@ -181,7 +253,7 @@ chatbot_access_project/
 │       ├── check_ip.html
 │       ├── success.html
 │       └── error.html
-├── unifi_modules/        # Unifi API integration (Phase 4)
+├── unifi_modules/        # Unifi API integration
 ├── docs/                 # Documentation
 │   ├── DISCORD_SETUP.md
 │   └── TESTING_GUIDE.md

@@ -34,17 +34,19 @@ def is_admin(interaction: discord.Interaction) -> bool:
 
 
 def _validate_ip(ip_str: str) -> bool:
-    """Return True if *ip_str* is a valid IPv4 or IPv6 address.
+    """Return True if *ip_str* is a valid, publicly routable IP address.
+
+    Rejects RFC 1918 private addresses, loopback, link-local, and all
+    other non-globally-routable ranges, in addition to malformed strings.
 
     Args:
         ip_str: IP address string to validate.
 
     Returns:
-        bool: True if valid, False otherwise.
+        bool: True if the address is valid and globally routable.
     """
     try:
-        ipaddress.ip_address(ip_str)
-        return True
+        return ipaddress.ip_address(ip_str).is_global
     except ValueError:
         return False
 
@@ -390,7 +392,7 @@ async def setup_commands(db: Database, unifi_manager=None) -> None:
 
         if not _validate_ip(ip_address):
             await interaction.followup.send(
-                f"❌ `{ip_address}` is not a valid IP address.",
+                f"❌ `{ip_address}` is not a valid IP address (private/non-routable IPs are not accepted).",
                 ephemeral=True,
             )
             return
