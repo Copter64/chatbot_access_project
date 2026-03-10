@@ -228,15 +228,15 @@ SECRET_KEY=your_random_secret_key
 5. **HTTPS**: Run behind reverse proxy (nginx) with SSL certifi
 
 ### GitHub Public Repository Checklist
-- [ ] All secrets are loaded from environment variables only
-- [ ] `.env` file is in `.gitignore`
-- [ ] `.env.example` contains only placeholder values (no real credentials)
-- [ ] No API keys, tokens, or passwords in code or comments
-- [ ] No hardcoded IP addresses or internal hostnames
-- [ ] Git history audited for accidentally committed secrets (use `git-secrets` or `truffleHog`)
-- [ ] Use pre-commit hooks to prevent secret commits (detect-secrets, git-secrets)
-- [ ] README includes security disclosure policy
-- [ ] Dependencies regularly updated and scanned for vulnerabilitiescate
+- [x] All secrets are loaded from environment variables only
+- [x] `.env` file is in `.gitignore`
+- [x] `.env.example` contains only placeholder values (no real credentials)
+- [x] No API keys, tokens, or passwords in code or comments
+- [x] No hardcoded IP addresses or internal hostnames
+- [x] Git history audited for accidentally committed secrets (use `git-secrets` or `truffleHog`)
+- [x] Use pre-commit hooks to prevent secret commits (detect-secrets, git-secrets)
+- [x] README includes security disclosure policy
+- [x] Dependencies regularly updated and scanned for vulnerabilities
 6. **Credential Storage**: Never commit .env file, use Docker secrets in production
 7. **Unifi API**: Store credentials securely, use HTTPS for API calls
 8. **Database**: Backup database regularly, not exposed outside container

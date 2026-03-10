@@ -255,6 +255,10 @@ python3 -m pytest tests/ -v
 - ✅ Tokens are single-use and expire after 15 minutes
 - ✅ Rate limiting on `/request-access`
 
+### Reporting a Vulnerability
+
+If you discover a security vulnerability, please open a [GitHub Issue](https://github.com/Copter64/chatbot_access_project/issues) marked **[SECURITY]** or contact the repository owner directly via Discord. Do not include sensitive details in public issues.
+
 ## Current Status
 
 - ✅ **Phase 1**: Foundation & Setup — Complete
