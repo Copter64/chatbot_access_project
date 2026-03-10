@@ -107,6 +107,24 @@ The following pre-commit hooks must pass before every commit:
 - `check-yaml`, `check-json`, `check-merge-conflict`, `trailing-whitespace`, `end-of-file-fixer`
 
 Do not commit large files or leave merge conflict markers in code.
+
+---
+
+## Development Workflow Best Practices
+
+1. **Before Each Commit**
+   - Run `black` to format code
+   - Run `flake8` to check for PEP 8 violations
+   - Run tests to ensure nothing is broken
+   - Update relevant documentation if needed
+   - Verify no secrets are being committed
+
+2. **Documentation Update Triggers**
+   - New feature added → update README and relevant docs
+   - Configuration changed → update `.env.example`
+   - Bug fix → update `CHANGELOG.md`
+   - Architecture change → update `PROJECT_OUTLINE.md`
+
 ---
 
 ## Service Migration & Deployment Safety

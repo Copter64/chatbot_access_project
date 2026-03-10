@@ -289,49 +289,7 @@ chatbot_access_project/
 ├── .env.example               # Template with placeholder values
 ├── .gitignore                 # Excludes .env, *.db, __pycache__, etc.
 ├── .pre-commit-config.yaml    # Pre-commit hooks configuration
-## Development Workflow Best Practices
-
-1. **Before Each Commit**
-   - Run `black` to format code
-   - Run `flake8` to check for PEP 8 violations
-   - Run tests to ensure nothing is broken
-   - Update relevant documentation if needed
-   - Verify no secrets are being committed
-
-2. **Pull Request Process**
-   - Write descriptive commit messages
-   - Include documentation updates in PR
-   - Ensure CI/CD pipeline passes
-   - Request code review from peers
-
-3. **Documentation Updates Triggers**
-   - New feature added → Update README and relevant docs
-   - API endpoint changed → Update API.md
-   - Configuration changed → Update .env.example and SETUP.md
-   - Bug fix → Update CHANGELOG.md
-   - Architecture change → Update PROJECT_OUTLINE.md
-
----
-
-**Notes:**
-- UDM Pro fully supports Unifi Controller API
-- Consider using `apscheduler` for scheduled cleanup tasks
-- `aiohttp` for async Unifi API calls alongside discord.py
-- SQLite with `aiosqlite` for async database operations
-- Use `python-dotenv` to load environment variables from .env file
-- Consider GitHub Actions for automated testing and linting on every pushs
-└── README.md                  # Main documentationt__.py
-│   ├── token_generator.py
-│   ├── scheduler.py           # Cleanup tasks
-│   └── logger.py
-├── main.py                    # Entry point
-├── config.py                  # Configuration loader
-├── requirements.txt
-├── Dockerfile
-├── docker-compose.yml
-├── .env.example
-├── .gitignore
-└── README.md
+└── README.md                  # Main documentation
 ```
 
 ---
