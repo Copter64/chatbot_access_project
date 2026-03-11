@@ -51,6 +51,25 @@ def _validate_ip(ip_str: str) -> bool:
         return False
 
 
+def _validate_ip_format(ip_str: str) -> bool:
+    """Return True if *ip_str* is a syntactically valid IP address.
+
+    Does NOT reject private or non-routable addresses — use this for
+    admin operations (e.g. removing a private IP already in the DB).
+
+    Args:
+        ip_str: IP address string to validate.
+
+    Returns:
+        bool: True if the address is parseable as an IP address.
+    """
+    try:
+        ipaddress.ip_address(ip_str)
+        return True
+    except ValueError:
+        return False
+
+
 async def setup_commands(db: Database, unifi_manager=None) -> None:
     """Set up all slash commands for the bot.
 
@@ -305,7 +324,7 @@ async def setup_commands(db: Database, unifi_manager=None) -> None:
             )
             return
 
-        if not _validate_ip(ip_address):
+        if not _validate_ip_format(ip_address):
             await interaction.followup.send(
                 f"❌ `{ip_address}` is not a valid IP address.",
                 ephemeral=True,
