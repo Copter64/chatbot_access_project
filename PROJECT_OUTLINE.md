@@ -314,6 +314,9 @@ chatbot_access_project/
 - [x] Send Discord DM warning 3 days before IP access expires — prevents users getting locked out unexpectedly
 - [x] Walk through building a testing pipeline to use with github in order to streamline the process more
 - [ ] Refresh expiry timer if the IP has been active in the last 30 days — detect recent activity via Unifi logs and auto-extend
+  - Approach: query Unifi `/stat/event` endpoint for recent traffic from the IP; if activity found within 30 days, extend expiry by 30 days
+  - Run as part of the existing scheduler job (alongside cleanup and expiry warnings)
+  - Next step: investigate whether Unifi API `/stat/event` surfaces inbound external IP traffic through the firewall group
 - [ ] Discord channel log sink — forward bot log messages to a dedicated Discord channel with a corresponding role
 - [ ] Audit log of all access grants and removals — searchable history for admin accountability
 - [ ] `/server-health` slash command — report game server status from within Discord
