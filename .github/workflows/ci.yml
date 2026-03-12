@@ -15,6 +15,12 @@
 
 name: CI
 
+# Explicitly grant the minimum token permissions needed.
+# Without this, private repos may default to no permissions and
+# actions/checkout will fail with "could not read Username".
+permissions:
+  contents: read
+
 on:
   push: # lint runs on every branch push
   pull_request:
