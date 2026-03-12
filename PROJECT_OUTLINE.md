@@ -310,6 +310,7 @@ chatbot_access_project/
 - [x] Reject RFC 1918 private IP addresses — only accept publicly routable IPs when capturing user addresses
 
 ### Features
+- [x] Add the gameserver info to the bot chat after the access-request is complete, for now we can add it in the .env or another config file for the chatbot to pull from.
 - [ ] Send Discord DM warning 3 days before IP access expires — prevents users getting locked out unexpectedly
 - [ ] Extend access command — restart the 30-day timer without a new IP capture flow
 - [ ] Refresh expiry timer if the IP has been active in the last 30 days — detect recent activity via Unifi logs and auto-extend

@@ -26,6 +26,7 @@ def create_app(
     loop: asyncio.AbstractEventLoop,
     alert_callback: Optional[Callable[[str, str], None]] = None,
     unifi_manager: Optional["UnifiFirewallManager"] = None,
+    server_info_callback: Optional[Callable[[str, str, str], None]] = None,
 ) -> Flask:
     """Create and configure the Flask application.
 
@@ -37,6 +38,9 @@ def create_app(
         unifi_manager: Optional :class:`~unifi_modules.firewall.UnifiFirewallManager`
             instance.  When provided, confirmed IPs are pushed to the
             Unifi firewall group immediately after DB insertion.
+        server_info_callback: Optional callable(discord_user_id, ip, expires)
+            invoked after a user's IP is successfully confirmed.  Used to
+            send the game-server connection details DM from the bot.
 
     Returns:
         Flask: Configured Flask application instance.
@@ -60,6 +64,7 @@ def create_app(
     app.config["IP_EXPIRATION_DAYS"] = Config.IP_EXPIRATION_DAYS
     app.config["SECURITY"] = security
     app.config["UNIFI"] = unifi_manager  # None until Phase 4 wired
+    app.config["SERVER_INFO_CALLBACK"] = server_info_callback
 
     # Register routes blueprint
     from web.routes import bp  # noqa: E402 (avoid circular import at module top)

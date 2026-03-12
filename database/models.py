@@ -184,6 +184,25 @@ class Database:
             row = await cursor.fetchone()
             return dict(row) if row else None
 
+    async def get_user_by_id(self, user_id: int) -> Optional[dict]:
+        """Get user by database primary key.
+
+        Args:
+            user_id: Database user ID (integer primary key).
+
+        Returns:
+            dict or None: User data if found, None otherwise.
+        """
+        if not self.connection:
+            await self.connect()
+
+        async with self.connection.cursor() as cursor:
+            await cursor.execute(
+                "SELECT * FROM users WHERE id = ?", (user_id,)
+            )
+            row = await cursor.fetchone()
+            return dict(row) if row else None
+
     async def create_user(self, discord_id: str, username: str) -> int:
         """Create a new user.
 

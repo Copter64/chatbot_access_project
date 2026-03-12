@@ -413,3 +413,80 @@ class TestWebRateLimiting:
             client.get(f"/check-ip/{VALID_TOKEN}", environ_base={"REMOTE_ADDR": "8.8.8.8"})
             response = client.get(f"/check-ip/{VALID_TOKEN}", environ_base={"REMOTE_ADDR": "8.8.8.8"})
         assert b"Too Many Requests" in response.data
+
+
+# ---------------------------------------------------------------------------
+# Server info callback
+# ---------------------------------------------------------------------------
+
+
+def _make_app_with_callback(
+    loop: asyncio.AbstractEventLoop,
+    callback,
+    token_row=None,
+):
+    """Create a Flask test app with a server_info_callback injected."""
+    mock_db = MagicMock()
+    mock_db.get_token = AsyncMock(return_value=token_row)
+    mock_db.mark_token_used = AsyncMock(return_value=True)
+    mock_db.add_ip_address = AsyncMock(return_value=1)
+    mock_db.log_request = AsyncMock(return_value=None)
+    mock_db.get_user_by_id = AsyncMock(
+        return_value={"id": 42, "discord_id": "111222333444"}
+    )
+
+    app = create_app(mock_db, loop, server_info_callback=callback)
+    app.config["TESTING"] = True
+    return app
+
+
+class TestServerInfoCallback:
+    """Verify the server_info_callback is invoked after IP confirmation."""
+
+    def test_callback_called_on_successful_confirm(self, event_loop_thread):
+        """Callback receives (discord_id, ip, expires) on successful POST."""
+        callback = MagicMock()
+        token_row = {"id": 1, "user_id": 42, "token": VALID_TOKEN}
+        app = _make_app_with_callback(event_loop_thread, callback, token_row)
+
+        with app.test_client() as client:
+            response = client.post(
+                f"/confirm-ip/{VALID_TOKEN}",
+                environ_base={"REMOTE_ADDR": "8.8.8.8"},
+            )
+
+        assert response.status_code == 302
+        callback.assert_called_once()
+        args = callback.call_args[0]
+        assert args[0] == "111222333444"
+        assert args[1] == "8.8.8.8"
+        # expires is a YYYY-MM-DD string
+        assert len(args[2]) == 10 and args[2][4] == "-"
+
+    def test_callback_not_called_when_token_invalid(self, event_loop_thread):
+        """Callback must NOT be invoked if the token is expired/missing."""
+        callback = MagicMock()
+        app = _make_app_with_callback(event_loop_thread, callback, token_row=None)
+
+        with app.test_client() as client:
+            client.post(
+                f"/confirm-ip/{VALID_TOKEN}",
+                environ_base={"REMOTE_ADDR": "8.8.8.8"},
+            )
+
+        callback.assert_not_called()
+
+    def test_callback_not_called_when_no_callback_configured(
+        self, event_loop_thread
+    ):
+        """Confirm-IP succeeds normally when no callback is registered."""
+        token_row = {"id": 1, "user_id": 42, "token": VALID_TOKEN}
+        app = _make_app(event_loop_thread, token_row=token_row)
+
+        with app.test_client() as client:
+            response = client.post(
+                f"/confirm-ip/{VALID_TOKEN}",
+                environ_base={"REMOTE_ADDR": "8.8.8.8"},
+            )
+
+        assert response.status_code == 302

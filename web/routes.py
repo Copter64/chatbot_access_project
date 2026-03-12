@@ -366,6 +366,24 @@ def confirm_ip(token: str):
                     exc_info=True,
                 )
 
+        # Send server connection info DM to the user (best-effort).
+        # Failure here never blocks the success response.
+        server_info_cb = current_app.config.get("SERVER_INFO_CALLBACK")
+        if server_info_cb is not None:
+            try:
+                user_row = _run_async(db.get_user_by_id(user_id))
+                if user_row:
+                    server_info_cb(
+                        user_row["discord_id"],
+                        client_ip,
+                        expires_at.strftime("%Y-%m-%d"),
+                    )
+            except Exception as cb_exc:
+                logger.error(
+                    f"Server info DM callback failed for user_id={user_id}: {cb_exc}",
+                    exc_info=True,
+                )
+
     except Exception as e:
         logger.error(f"Database error saving IP: {e}", exc_info=True)
         return (

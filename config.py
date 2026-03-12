@@ -87,6 +87,13 @@ class Config:
         )
     )
 
+    # Game Server Connection Info (sent to users after IP is confirmed)
+    GAMESERVER_NAME: str = os.getenv("GAMESERVER_NAME", "Game Server")
+    GAMESERVER_HOST: str = os.getenv("GAMESERVER_HOST", "")
+    GAMESERVER_PORT: str = os.getenv("GAMESERVER_PORT", "")
+    GAMESERVER_PASSWORD: str = os.getenv("GAMESERVER_PASSWORD", "")
+    GAMESERVER_EXTRA_INFO: str = os.getenv("GAMESERVER_EXTRA_INFO", "")
+
     # TLS / SSL
     SSL_CERT: Optional[str] = os.getenv("SSL_CERT") or None
     SSL_KEY: Optional[str] = os.getenv("SSL_KEY") or None
