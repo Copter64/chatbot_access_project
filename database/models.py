@@ -165,6 +165,20 @@ class Database:
 
         await self.connection.commit()
 
+        # --- Schema migrations ---
+        # Add warning_sent column for expiry warning DMs (idempotent).
+        # SQLite does not support ALTER TABLE ADD COLUMN IF NOT EXISTS so we
+        # attempt the migration and swallow the error if it already exists.
+        try:
+            async with self.connection.cursor() as cursor:
+                await cursor.execute(
+                    "ALTER TABLE ip_addresses "
+                    "ADD COLUMN warning_sent BOOLEAN DEFAULT 0"
+                )
+            await self.connection.commit()
+        except Exception:
+            pass  # column already exists — no action needed
+
     async def get_user_by_discord_id(self, discord_id: str) -> Optional[dict]:
         """Get user by Discord ID.
 
@@ -474,6 +488,62 @@ class Database:
             """)
             rows = await cursor.fetchall()
             return [dict(row) for row in rows]
+
+    async def get_ips_expiring_soon(self, days: int) -> list:
+        """Return active IPs that expire within *days* days and haven't been warned.
+
+        Used by the scheduler to find records that need an expiry warning DM.
+        Only returns rows where ``warning_sent = 0`` so each user is warned
+        at most once per access period.
+
+        Args:
+            days: Look-ahead window in days.
+
+        Returns:
+            list[dict]: Each dict contains ``id``, ``ip_address``,
+                ``expires_at``, ``user_id``, ``discord_id``,
+                and ``discord_username``.
+        """
+        if not self.connection:
+            await self.connect()
+
+        async with self.connection.cursor() as cursor:
+            await cursor.execute(
+                """
+                SELECT i.id, i.ip_address, i.expires_at, i.user_id,
+                       u.discord_id, u.discord_username
+                FROM ip_addresses i
+                JOIN users u ON u.id = i.user_id
+                WHERE i.is_active = 1
+                  AND i.warning_sent = 0
+                  AND i.expires_at > CURRENT_TIMESTAMP
+                  AND i.expires_at <= datetime('now', '+' || ? || ' days')
+                ORDER BY i.expires_at ASC
+                """,
+                (days,),
+            )
+            rows = await cursor.fetchall()
+            return [dict(row) for row in rows]
+
+    async def mark_ip_warning_sent(self, ip_id: int) -> bool:
+        """Mark an IP record as having had its expiry warning DM sent.
+
+        Args:
+            ip_id: Primary key of the ip_addresses row.
+
+        Returns:
+            bool: True if the row was updated, False if not found.
+        """
+        if not self.connection:
+            await self.connect()
+
+        async with self.connection.cursor() as cursor:
+            await cursor.execute(
+                "UPDATE ip_addresses SET warning_sent = 1 WHERE id = ?",
+                (ip_id,),
+            )
+            await self.connection.commit()
+            return cursor.rowcount > 0
 
     async def get_active_ip_by_address(self, ip_address: str) -> Optional[dict]:
         """Find the first active IP record matching *ip_address*.

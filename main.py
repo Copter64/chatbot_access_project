@@ -118,12 +118,27 @@ async def main():
         run_web_server(flask_app)
         logger.info(f"✅ Web server running at {Config.WEB_BASE_URL}")
 
+        def _warning_callback(
+            discord_user_id: str, ip: str, expires: str
+        ) -> None:
+            """Fire-and-forget: schedule expiry warning DM on the bot loop."""
+            if bot is not None:
+                asyncio.run_coroutine_threadsafe(
+                    bot.send_expiry_warning_dm(discord_user_id, ip, expires),
+                    loop,
+                )
+
         # Start the background cleanup scheduler
+        # CLEANUP_INTERVAL_SECONDS overrides CLEANUP_INTERVAL_HOURS when set
+        # (useful for local testing without waiting 24 h between runs)
         start_scheduler(
             db,
             loop,
             unifi_manager=unifi_manager,
             interval_hours=Config.CLEANUP_INTERVAL_HOURS,
+            interval_seconds=Config.CLEANUP_INTERVAL_SECONDS,
+            warning_callback=_warning_callback,
+            warning_days=Config.EXPIRY_WARNING_DAYS,
         )
 
         logger.info("✅ Bot initialization complete")

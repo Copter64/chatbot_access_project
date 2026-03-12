@@ -60,6 +60,10 @@ class Config:
 
     # Cleanup Scheduler
     CLEANUP_INTERVAL_HOURS: int = int(os.getenv("CLEANUP_INTERVAL_HOURS", "24"))
+    # Override with seconds for testing (takes precedence over HOURS when set)
+    CLEANUP_INTERVAL_SECONDS: int = int(os.getenv("CLEANUP_INTERVAL_SECONDS", "0"))
+    # Number of days before expiry to send the warning DM
+    EXPIRY_WARNING_DAYS: int = int(os.getenv("EXPIRY_WARNING_DAYS", "3"))
 
     # Web Security
     WEB_RATE_LIMIT_REQUESTS: int = int(os.getenv("WEB_RATE_LIMIT_REQUESTS", "30"))

@@ -119,6 +119,46 @@ class GameServerBot(discord.Client):
                     exc_info=True,
                 )
 
+    async def send_expiry_warning_dm(
+        self, discord_user_id: str, ip: str, expires: str
+    ) -> None:
+        """Send a DM warning a user that their firewall access is expiring soon.
+
+        Silently skips users with DMs disabled or invalid IDs.
+
+        Args:
+            discord_user_id: Discord user ID string to DM.
+            ip: The IP address whose access is expiring.
+            expires: Expiry date string in YYYY-MM-DD format.
+        """
+        message = (
+            f"⏰ **Firewall Access Expiring Soon**\n\n"
+            f"Your IP `{ip}` will lose access to the game server on "
+            f"**{expires}**.\n\n"
+            f"To renew your access, use `/request-access` in the Discord "
+            f"server before that date."
+        )
+
+        try:
+            user = await self.fetch_user(int(discord_user_id))
+            await user.send(message)
+            logger.info(
+                f"Expiry warning DM sent to discord_user_id={discord_user_id} "
+                f"for IP {ip} (expires {expires})"
+            )
+        except discord.Forbidden:
+            logger.warning(
+                f"Cannot DM user {discord_user_id} expiry warning: "
+                "DMs disabled or bot blocked"
+            )
+        except discord.NotFound:
+            logger.warning(f"User {discord_user_id} not found for expiry warning")
+        except Exception as exc:
+            logger.error(
+                f"Error sending expiry warning DM to {discord_user_id}: {exc}",
+                exc_info=True,
+            )
+
     async def send_server_info_dm(
         self, discord_user_id: str, ip: str, expires: str
     ) -> None:
