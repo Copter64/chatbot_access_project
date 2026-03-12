@@ -211,9 +211,7 @@ class Database:
             await self.connect()
 
         async with self.connection.cursor() as cursor:
-            await cursor.execute(
-                "SELECT * FROM users WHERE id = ?", (user_id,)
-            )
+            await cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
             row = await cursor.fetchone()
             return dict(row) if row else None
 

@@ -3,10 +3,11 @@
 This module sets up the Discord bot with proper intents and event handlers.
 """
 
-import discord
-from discord import app_commands
 from datetime import datetime, timezone
 from typing import Optional
+
+import discord
+from discord import app_commands
 
 from config import Config
 from utils.logger import get_logger
@@ -195,9 +196,7 @@ class GameServerBot(discord.Client):
         try:
             user = await self.fetch_user(int(discord_user_id))
             await user.send(message)
-            logger.info(
-                f"Server info DM sent to discord_user_id={discord_user_id}"
-            )
+            logger.info(f"Server info DM sent to discord_user_id={discord_user_id}")
         except discord.Forbidden:
             logger.warning(
                 f"Cannot DM user {discord_user_id}: DMs disabled or bot blocked"

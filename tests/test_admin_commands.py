@@ -8,10 +8,8 @@ with a mock discord.Interaction.
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import discord
-import pytest
 
 from discord_modules.commands import _validate_ip, is_admin, setup_commands
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -109,25 +107,19 @@ class TestIsAdmin:
 
     def test_returns_true_for_admin(self):
         interaction = _make_interaction(user_id=ADMIN_ID)
-        with patch(
-            "discord_modules.commands.Config"
-        ) as mock_cfg:
+        with patch("discord_modules.commands.Config") as mock_cfg:
             mock_cfg.ADMIN_DISCORD_USER_IDS = [ADMIN_ID]
             assert is_admin(interaction) is True
 
     def test_returns_false_for_non_admin(self):
         interaction = _make_interaction(user_id=NON_ADMIN_ID)
-        with patch(
-            "discord_modules.commands.Config"
-        ) as mock_cfg:
+        with patch("discord_modules.commands.Config") as mock_cfg:
             mock_cfg.ADMIN_DISCORD_USER_IDS = [ADMIN_ID]
             assert is_admin(interaction) is False
 
     def test_returns_false_when_no_admins_configured(self):
         interaction = _make_interaction(user_id=ADMIN_ID)
-        with patch(
-            "discord_modules.commands.Config"
-        ) as mock_cfg:
+        with patch("discord_modules.commands.Config") as mock_cfg:
             mock_cfg.ADMIN_DISCORD_USER_IDS = []
             assert is_admin(interaction) is False
 
@@ -334,9 +326,7 @@ class TestAddIp:
         with patch("discord_modules.commands.Config") as mock_cfg:
             mock_cfg.ADMIN_DISCORD_USER_IDS = [ADMIN_ID]
             mock_cfg.IP_EXPIRATION_DAYS = 30
-            await handlers["add-ip"](
-                interaction, ip_address="1.2.3.4", user=member
-            )
+            await handlers["add-ip"](interaction, ip_address="1.2.3.4", user=member)
 
         msg = interaction.followup.send.call_args[0][0]
         assert "permission" in msg
@@ -350,9 +340,7 @@ class TestAddIp:
         with patch("discord_modules.commands.Config") as mock_cfg:
             mock_cfg.ADMIN_DISCORD_USER_IDS = [ADMIN_ID]
             mock_cfg.IP_EXPIRATION_DAYS = 30
-            await handlers["add-ip"](
-                interaction, ip_address="bad", user=member
-            )
+            await handlers["add-ip"](interaction, ip_address="bad", user=member)
 
         msg = interaction.followup.send.call_args[0][0]
         assert "not a valid IP" in msg
@@ -383,9 +371,7 @@ class TestAddIp:
         with patch("discord_modules.commands.Config") as mock_cfg:
             mock_cfg.ADMIN_DISCORD_USER_IDS = [ADMIN_ID]
             mock_cfg.IP_EXPIRATION_DAYS = 30
-            await handlers["add-ip"](
-                interaction, ip_address="1.2.3.4", user=member
-            )
+            await handlers["add-ip"](interaction, ip_address="1.2.3.4", user=member)
 
         db.add_ip_address.assert_awaited_once()
         msg = interaction.followup.send.call_args[0][0]
@@ -400,9 +386,7 @@ class TestAddIp:
         with patch("discord_modules.commands.Config") as mock_cfg:
             mock_cfg.ADMIN_DISCORD_USER_IDS = [ADMIN_ID]
             mock_cfg.IP_EXPIRATION_DAYS = 30
-            await handlers["add-ip"](
-                interaction, ip_address="2.3.4.5", user=member
-            )
+            await handlers["add-ip"](interaction, ip_address="2.3.4.5", user=member)
 
         db.add_ip_address.assert_awaited_once()
         msg = interaction.followup.send.call_args[0][0]

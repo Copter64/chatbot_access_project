@@ -87,9 +87,7 @@ def setup_logger(
 
         try:
             file_handler = logging.FileHandler(log_file)
-            file_handler.setLevel(
-                getattr(logging, log_level.upper(), logging.INFO)
-            )
+            file_handler.setLevel(getattr(logging, log_level.upper(), logging.INFO))
             file_formatter = logging.Formatter(log_format)
             file_handler.setFormatter(file_formatter)
 
@@ -100,9 +98,7 @@ def setup_logger(
                     self.flush()
 
             file_handler = FlushingFileHandler(log_file)
-            file_handler.setLevel(
-                getattr(logging, log_level.upper(), logging.INFO)
-            )
+            file_handler.setLevel(getattr(logging, log_level.upper(), logging.INFO))
             file_handler.setFormatter(file_formatter)
             logger.addHandler(file_handler)
         except PermissionError:

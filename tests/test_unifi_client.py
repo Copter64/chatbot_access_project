@@ -7,7 +7,6 @@ import requests
 
 from unifi_modules.client import UnifiAPIError, UnifiAuthError, UnifiClient
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -33,9 +32,7 @@ def _mock_response(status_code: int = 200, json_data=None, headers=None):
     resp.headers = headers or {}
     resp.json.return_value = json_data or {}
     if status_code >= 400:
-        resp.raise_for_status.side_effect = requests.HTTPError(
-            response=resp
-        )
+        resp.raise_for_status.side_effect = requests.HTTPError(response=resp)
     else:
         resp.raise_for_status.return_value = None
     return resp
@@ -52,9 +49,7 @@ class TestLogin:
     def test_login_success_sets_authenticated(self):
         """Successful login marks client as authenticated."""
         client = _make_client()
-        login_resp = _mock_response(
-            200, headers={"X-CSRF-Token": "csrf-abc"}
-        )
+        login_resp = _mock_response(200, headers={"X-CSRF-Token": "csrf-abc"})
         with patch.object(client._session, "post", return_value=login_resp):
             client.login()
 
@@ -63,9 +58,7 @@ class TestLogin:
     def test_login_stores_csrf_token(self):
         """CSRF token from response header is stored for future requests."""
         client = _make_client()
-        login_resp = _mock_response(
-            200, headers={"X-CSRF-Token": "token-xyz"}
-        )
+        login_resp = _mock_response(200, headers={"X-CSRF-Token": "token-xyz"})
         with patch.object(client._session, "post", return_value=login_resp):
             client.login()
 
@@ -127,9 +120,7 @@ class TestRequest:
     def _authed_client(self) -> UnifiClient:
         """Return a pre-authenticated client (login already called)."""
         client = _make_client()
-        login_resp = _mock_response(
-            200, headers={"X-CSRF-Token": "csrf-test"}
-        )
+        login_resp = _mock_response(200, headers={"X-CSRF-Token": "csrf-test"})
         with patch.object(client._session, "post", return_value=login_resp):
             client.login()
         return client
@@ -140,10 +131,9 @@ class TestRequest:
         login_resp = _mock_response(200, headers={"X-CSRF-Token": "t1"})
         api_resp = _mock_response(200, json_data={"data": []})
 
-        with patch.object(
-            client._session, "post", return_value=login_resp
-        ) as mock_post, patch.object(
-            client._session, "request", return_value=api_resp
+        with (
+            patch.object(client._session, "post", return_value=login_resp) as mock_post,
+            patch.object(client._session, "request", return_value=api_resp),
         ):
             client.request("GET", "/some/path")
             mock_post.assert_called_once()
@@ -171,11 +161,12 @@ class TestRequest:
         relogin_resp = _mock_response(200, headers={"X-CSRF-Token": "csrf-new"})
 
         request_calls = iter([unauth_resp, ok_resp])
-        with patch.object(
-            client._session, "request", side_effect=request_calls
-        ), patch.object(
-            client._session, "post", return_value=relogin_resp
-        ) as mock_relogin:
+        with (
+            patch.object(client._session, "request", side_effect=request_calls),
+            patch.object(
+                client._session, "post", return_value=relogin_resp
+            ) as mock_relogin,
+        ):
             result = client.request("GET", "/some/path")
             mock_relogin.assert_called_once()
             assert result.status_code == 200
@@ -196,9 +187,7 @@ class TestRequest:
         client = self._authed_client()
         bad_resp = _mock_response(500)
 
-        with patch.object(
-            client._session, "request", return_value=bad_resp
-        ):
+        with patch.object(client._session, "request", return_value=bad_resp):
             with pytest.raises(UnifiAPIError):
                 client.request("GET", "/some/path")
 

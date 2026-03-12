@@ -106,9 +106,7 @@ class TestGetMemberInGuild:
         # isinstance(member, discord.Member) must be True
         interaction = _make_interaction(member=member)
         # Patch isinstance so our mock is treated as discord.Member
-        with patch(
-            "discord_modules.role_checker.isinstance", return_value=True
-        ):
+        with patch("discord_modules.role_checker.isinstance", return_value=True):
             result = await get_member_in_guild(interaction)
         assert result is member
 
@@ -175,17 +173,13 @@ class TestVerifyRoleAccess:
     async def test_returns_true_with_valid_role(self):
         member = _make_member(["gameserver"])
         interaction = _make_interaction(member=member)
-        with patch(
-            "discord_modules.role_checker.isinstance", return_value=True
-        ):
+        with patch("discord_modules.role_checker.isinstance", return_value=True):
             result = await verify_role_access(interaction)
         assert result is True
 
     async def test_returns_false_without_required_role(self):
         member = _make_member(["admin"])
         interaction = _make_interaction(member=member)
-        with patch(
-            "discord_modules.role_checker.isinstance", return_value=True
-        ):
+        with patch("discord_modules.role_checker.isinstance", return_value=True):
             result = await verify_role_access(interaction)
         assert result is False

@@ -143,9 +143,7 @@ async def warn_expiring_ips(
             )
             errors += 1
 
-    logger.info(
-        f"Expiry warning complete: {warned} warned, {errors} error(s)"
-    )
+    logger.info(f"Expiry warning complete: {warned} warned, {errors} error(s)")
     return {"warned": warned, "errors": errors}
 
 

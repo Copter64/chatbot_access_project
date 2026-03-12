@@ -114,12 +114,8 @@ class SecurityManager:
             if state.error_count >= self._bf_threshold and not state.alerted:
                 state.alerted = True
                 should_alert = True
-                detail = (
-                    f"{state.error_count} invalid or expired token attempts"
-                )
-                logger.warning(
-                    f"Brute-force threshold reached for IP {ip}: {detail}"
-                )
+                detail = f"{state.error_count} invalid or expired token attempts"
+                logger.warning(f"Brute-force threshold reached for IP {ip}: {detail}")
 
         if should_alert and self._alert_callback:
             try:

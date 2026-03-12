@@ -312,7 +312,7 @@ chatbot_access_project/
 ### Features
 - [x] Add the gameserver info to the bot chat after the access-request is complete, for now we can add it in the .env or another config file for the chatbot to pull from.
 - [x] Send Discord DM warning 3 days before IP access expires — prevents users getting locked out unexpectedly
-- [ ] Walk through building a testing pipeline to use with github in order to streamline the process more
+- [x] Walk through building a testing pipeline to use with github in order to streamline the process more
 - [ ] Extend access command — restart the 30-day timer without a new IP capture flow
 - [ ] Refresh expiry timer if the IP has been active in the last 30 days — detect recent activity via Unifi logs and auto-extend
 - [ ] Discord channel log sink — forward bot log messages to a dedicated Discord channel with a corresponding role

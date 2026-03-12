@@ -3,10 +3,7 @@
 import time
 from unittest.mock import MagicMock
 
-import pytest
-
 from web.security import SecurityManager
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -181,7 +178,7 @@ class TestGetStats:
         assert stats["alerted"] is False
 
     def test_alerted_flag_set_after_threshold(self):
-        """alerted flag should be True once the threshold callback has fired."""
+        """Alerted flag should be True once the threshold callback has fired."""
         sm = _sm(threshold=2)
         sm.record_error("1.2.3.4")
         sm.record_error("1.2.3.4")

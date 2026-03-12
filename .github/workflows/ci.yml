@@ -1,0 +1,117 @@
+# GitHub Actions CI pipeline for Discord Game Server Access Bot
+#
+# Lint runs on every push to every branch — fast feedback on all work-in-progress.
+# Test and Security run only on PRs targeting master — full gate before merge.
+#
+# Direct pushes to master should be blocked via branch protection rules so that
+# the only path to master is a reviewed, green PR. See docs/CI_PIPELINE.md.
+#
+# Jobs:
+#   lint     — black, isort, flake8  (all branches)
+#   test     — pytest full suite with coverage  (PR to master only)
+#   security — bandit + safety  (PR to master only)
+#
+# No secrets are required: all tests mock Discord/Unifi/web credentials.
+
+name: CI
+
+on:
+  push: # lint runs on every branch push
+  pull_request:
+    branches: ["master"] # full suite gates PR merges to master
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Lint — runs on every push and every PR
+  # ---------------------------------------------------------------------------
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dev dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: black — format check
+        run: black --check --diff .
+
+      - name: isort — import order check
+        run: isort --check-only --diff .
+
+      - name: flake8 — style check
+        run: flake8 .
+
+  # ---------------------------------------------------------------------------
+  # Test — PR to master only
+  # ---------------------------------------------------------------------------
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    needs: lint
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Run tests with coverage
+        run: |
+          pytest --cov=. --cov-report=term-missing --cov-report=xml -q
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.xml
+          retention-days: 7
+
+  # ---------------------------------------------------------------------------
+  # Security — PR to master only
+  # ---------------------------------------------------------------------------
+  security:
+    name: Security scan
+    runs-on: ubuntu-latest
+    needs: lint
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: bandit — static security analysis
+        run: |
+          bandit -r . \
+            --exclude ./tests,./venv,./.venv \
+            --skip B104 \
+            -ll
+
+      - name: safety — dependency vulnerability scan
+        run: safety check --full-report
+        continue-on-error: true # advisory only — don't fail the build
