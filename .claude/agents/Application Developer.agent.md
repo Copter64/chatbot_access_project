@@ -81,6 +81,22 @@ data/                   # Runtime data (SQLite DB, logs) — gitignored
 - Write or update tests for every new feature or bug fix.
 - Run tests with: `pytest`
 
+### GitHub Actions CI Pipeline
+
+The project runs a CI pipeline on GitHub Actions (`.github/workflows/ci.yml`):
+
+- **`Lint` job** — runs on every push to every branch: `black`, `isort`, `flake8`
+- **`Test` job** — runs on PRs to `master` only: full pytest suite with coverage
+- **`Security` job** — runs on PRs to `master` only: `bandit` (blocks on failure) + `safety` (advisory)
+
+**Every new feature or bug fix must include tests that pass this pipeline.** Before marking work complete:
+1. Ensure `black`, `isort`, and `flake8` are clean — the `Lint` job will fail the branch push if not
+2. Ensure `pytest` passes with no failures — the `Test` job blocks the PR merge if tests fail
+3. All new public functions and classes must have docstrings (`flake8-docstrings` enforces this)
+4. New environment variables must be added to `.env.example` — `detect-secrets` hooks scan for leaked values
+
+See `docs/CI_PIPELINE.md` for full pipeline documentation and branch protection setup.
+
 ---
 
 ## Documentation
