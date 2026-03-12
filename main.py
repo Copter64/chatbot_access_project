@@ -99,8 +99,21 @@ async def main():
             if bot is not None:
                 asyncio.run_coroutine_threadsafe(bot.send_admin_alert(ip, detail), loop)
 
+        def _server_info_callback(
+            discord_user_id: str, ip: str, expires: str
+        ) -> None:
+            """Fire-and-forget: schedule server info DM on the bot loop."""
+            if bot is not None:
+                asyncio.run_coroutine_threadsafe(
+                    bot.send_server_info_dm(discord_user_id, ip, expires), loop
+                )
+
         flask_app = create_app(
-            db, loop, alert_callback=_alert_callback, unifi_manager=unifi_manager
+            db,
+            loop,
+            alert_callback=_alert_callback,
+            unifi_manager=unifi_manager,
+            server_info_callback=_server_info_callback,
         )
         run_web_server(flask_app)
         logger.info(f"✅ Web server running at {Config.WEB_BASE_URL}")

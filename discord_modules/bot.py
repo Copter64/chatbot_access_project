@@ -119,6 +119,57 @@ class GameServerBot(discord.Client):
                     exc_info=True,
                 )
 
+    async def send_server_info_dm(
+        self, discord_user_id: str, ip: str, expires: str
+    ) -> None:
+        """Send a server connection info DM to a user after IP confirmation.
+
+        Builds the message from GAMESERVER_* config values. If
+        GAMESERVER_HOST is not configured, only the access-granted
+        confirmation is sent. Silently skips users with DMs disabled.
+
+        Args:
+            discord_user_id: Discord user ID string to DM.
+            ip: The confirmed IP address that was added to the firewall.
+            expires: Expiry date string in YYYY-MM-DD format.
+        """
+        lines = [
+            "✅ **Access Granted!**\n",
+            f"Your IP `{ip}` has been added to the server firewall.",
+            f"Access expires on **{expires}**.",
+        ]
+
+        if Config.GAMESERVER_HOST:
+            server_name = Config.GAMESERVER_NAME or "Game Server"
+            lines.append(f"\n🎮 **{server_name} — Connection Info**")
+            lines.append(f"🌐 Host: `{Config.GAMESERVER_HOST}`")
+            if Config.GAMESERVER_PORT:
+                lines.append(f"🔌 Port: `{Config.GAMESERVER_PORT}`")
+            if Config.GAMESERVER_PASSWORD:
+                lines.append(f"🔑 Password: `{Config.GAMESERVER_PASSWORD}`")
+            if Config.GAMESERVER_EXTRA_INFO:
+                lines.append(f"\n📝 {Config.GAMESERVER_EXTRA_INFO}")
+
+        message = "\n".join(lines)
+
+        try:
+            user = await self.fetch_user(int(discord_user_id))
+            await user.send(message)
+            logger.info(
+                f"Server info DM sent to discord_user_id={discord_user_id}"
+            )
+        except discord.Forbidden:
+            logger.warning(
+                f"Cannot DM user {discord_user_id}: DMs disabled or bot blocked"
+            )
+        except discord.NotFound:
+            logger.warning(f"User {discord_user_id} not found")
+        except Exception as exc:
+            logger.error(
+                f"Error sending server info DM to {discord_user_id}: {exc}",
+                exc_info=True,
+            )
+
 
 # Global bot instance
 bot: Optional[GameServerBot] = None
