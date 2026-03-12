@@ -234,9 +234,7 @@ async def setup_commands(db: Database, unifi_manager=None) -> None:
         name="list-ips",
         description="[Admin] List active firewall IPs",
     )
-    @app_commands.describe(
-        user="Optional: filter by a specific Discord member"
-    )
+    @app_commands.describe(user="Optional: filter by a specific Discord member")
     async def list_ips(
         interaction: discord.Interaction,
         user: Optional[discord.Member] = None,
@@ -288,12 +286,9 @@ async def setup_commands(db: Database, unifi_manager=None) -> None:
             if len(rows) > 20:
                 lines.append(f"*…and {len(rows) - 20} more*")
 
-            await interaction.followup.send(
-                "\n".join(lines), ephemeral=True
-            )
+            await interaction.followup.send("\n".join(lines), ephemeral=True)
             logger.info(
-                f"Admin {interaction.user.name} listed "
-                f"{len(rows)} active IPs"
+                f"Admin {interaction.user.name} listed " f"{len(rows)} active IPs"
             )
 
         except Exception as exc:
@@ -311,9 +306,7 @@ async def setup_commands(db: Database, unifi_manager=None) -> None:
         description="[Admin] Remove an IP from the firewall and database",
     )
     @app_commands.describe(ip_address="The IP address to remove")
-    async def remove_ip_cmd(
-        interaction: discord.Interaction, ip_address: str
-    ):
+    async def remove_ip_cmd(interaction: discord.Interaction, ip_address: str):
         """Handle the /remove-ip admin command."""
         await interaction.response.defer(ephemeral=True)
 
@@ -355,9 +348,7 @@ async def setup_commands(db: Database, unifi_manager=None) -> None:
                         else "⚠️ IP not found in Unifi group"
                     )
                 except Exception as exc:
-                    logger.error(
-                        f"Unifi remove_ip failed for {ip_address}: {exc}"
-                    )
+                    logger.error(f"Unifi remove_ip failed for {ip_address}: {exc}")
                     unifi_note = f"⚠️ Unifi error: {exc}"
 
             # Deactivate in DB
@@ -411,7 +402,8 @@ async def setup_commands(db: Database, unifi_manager=None) -> None:
 
         if not _validate_ip(ip_address):
             await interaction.followup.send(
-                f"❌ `{ip_address}` is not a valid IP address (private/non-routable IPs are not accepted).",
+                f"❌ `{ip_address}` is not a valid IP address "
+                "(private/non-routable IPs are not accepted).",
                 ephemeral=True,
             )
             return
@@ -441,20 +433,14 @@ async def setup_commands(db: Database, unifi_manager=None) -> None:
                         None, lambda: unifi_manager.add_ip(ip_address)
                     )
                     unifi_note = (
-                        "✅ Added to Unifi"
-                        if unifi_ok
-                        else "⚠️ Already in Unifi group"
+                        "✅ Added to Unifi" if unifi_ok else "⚠️ Already in Unifi group"
                     )
                 except Exception as exc:
-                    logger.error(
-                        f"Unifi add_ip failed for {ip_address}: {exc}"
-                    )
+                    logger.error(f"Unifi add_ip failed for {ip_address}: {exc}")
                     unifi_note = f"⚠️ Unifi error: {exc}"
 
             # Upsert in DB
-            await db.add_ip_address(
-                user_id, ip_address, expires_at.isoformat()
-            )
+            await db.add_ip_address(user_id, ip_address, expires_at.isoformat())
 
             await interaction.followup.send(
                 f"✅ Added `{ip_address}` for {user.mention} "

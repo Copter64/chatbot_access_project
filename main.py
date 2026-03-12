@@ -99,9 +99,7 @@ async def main():
             if bot is not None:
                 asyncio.run_coroutine_threadsafe(bot.send_admin_alert(ip, detail), loop)
 
-        def _server_info_callback(
-            discord_user_id: str, ip: str, expires: str
-        ) -> None:
+        def _server_info_callback(discord_user_id: str, ip: str, expires: str) -> None:
             """Fire-and-forget: schedule server info DM on the bot loop."""
             if bot is not None:
                 asyncio.run_coroutine_threadsafe(
@@ -118,9 +116,7 @@ async def main():
         run_web_server(flask_app)
         logger.info(f"✅ Web server running at {Config.WEB_BASE_URL}")
 
-        def _warning_callback(
-            discord_user_id: str, ip: str, expires: str
-        ) -> None:
+        def _warning_callback(discord_user_id: str, ip: str, expires: str) -> None:
             """Fire-and-forget: schedule expiry warning DM on the bot loop."""
             if bot is not None:
                 asyncio.run_coroutine_threadsafe(

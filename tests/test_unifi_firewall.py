@@ -7,7 +7,6 @@ import pytest
 from unifi_modules.client import UnifiAPIError, UnifiClient
 from unifi_modules.firewall import UnifiFirewallManager, UnifiGroupNotFoundError
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -156,9 +155,7 @@ class TestRemoveIp:
 
     def test_removes_existing_ip_returns_true(self):
         """Returns True and PUTs updated group when IP is present."""
-        manager, mock_client, _ = _make_manager(
-            group_members=["1.1.1.1", "2.2.2.2"]
-        )
+        manager, mock_client, _ = _make_manager(group_members=["1.1.1.1", "2.2.2.2"])
         result = manager.remove_ip("1.1.1.1")
 
         assert result is True
@@ -166,9 +163,7 @@ class TestRemoveIp:
 
     def test_put_excludes_removed_ip(self):
         """PUT payload does not contain the removed IP."""
-        manager, mock_client, _ = _make_manager(
-            group_members=["1.1.1.1", "2.2.2.2"]
-        )
+        manager, mock_client, _ = _make_manager(group_members=["1.1.1.1", "2.2.2.2"])
         manager.remove_ip("1.1.1.1")
 
         put_call = mock_client.request.call_args_list[1]
@@ -216,9 +211,7 @@ class TestSyncGroup:
 
     def test_sync_no_op_when_already_in_sync(self):
         """No PUT is issued when the group already matches the desired list."""
-        manager, mock_client, _ = _make_manager(
-            group_members=["1.1.1.1", "2.2.2.2"]
-        )
+        manager, mock_client, _ = _make_manager(group_members=["1.1.1.1", "2.2.2.2"])
         # Same IPs — order shouldn't matter
         manager.sync_group(["2.2.2.2", "1.1.1.1"])
 

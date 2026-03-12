@@ -118,9 +118,9 @@ class TestConcurrentCheckIp:
 
         statuses = _run_concurrent(request)
         # 400 = bad token format; 404 = not found; 410 = token expired/gone
-        assert all(s in (400, 404, 410) for s in statuses), (
-            f"Unexpected status codes: {statuses}"
-        )
+        assert all(
+            s in (400, 404, 410) for s in statuses
+        ), f"Unexpected status codes: {statuses}"
 
 
 # ---------------------------------------------------------------------------
@@ -133,9 +133,7 @@ class TestConcurrentConfirmIp:
 
     def test_all_posts_succeed_or_rate_limited(self, event_loop_thread):
         """Every concurrent POST returns 200 or 429; never 500."""
-        app, _ = _make_app(
-            event_loop_thread, token_row=TOKEN_ROW, rate_limit=1000
-        )
+        app, _ = _make_app(event_loop_thread, token_row=TOKEN_ROW, rate_limit=1000)
 
         def request(idx):
             ip = f"203.0.113.{(idx % 254) + 1}"
@@ -188,9 +186,7 @@ class TestRateLimiterUnderLoad:
         """With limit=5, the 6th+ request from the same IP must be 429."""
         limit = 5
         total = 30
-        app, _ = _make_app(
-            event_loop_thread, token_row=TOKEN_ROW, rate_limit=limit
-        )
+        app, _ = _make_app(event_loop_thread, token_row=TOKEN_ROW, rate_limit=limit)
 
         def request():
             with app.test_client() as client:
@@ -210,9 +206,7 @@ class TestRateLimiterUnderLoad:
     def test_different_ips_not_blocked_by_one_ips_limit(self, event_loop_thread):
         """Rate limiting one IP must not affect different IPs."""
         limit = 2
-        app, _ = _make_app(
-            event_loop_thread, token_row=TOKEN_ROW, rate_limit=limit
-        )
+        app, _ = _make_app(event_loop_thread, token_row=TOKEN_ROW, rate_limit=limit)
 
         # Exhaust the limit for IP A
         with app.test_client() as client:

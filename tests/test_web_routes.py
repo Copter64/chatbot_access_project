@@ -223,11 +223,11 @@ class TestPrivateIpRejection:
     """GET /check-ip and POST /confirm-ip must reject RFC 1918 and loopback IPs."""
 
     PRIVATE_IPS = [
-        "127.0.0.1",        # loopback
-        "10.0.0.1",         # RFC 1918 class A
-        "172.16.0.1",       # RFC 1918 class B
-        "192.168.1.100",    # RFC 1918 class C
-        "169.254.0.1",      # link-local
+        "127.0.0.1",  # loopback
+        "10.0.0.1",  # RFC 1918 class A
+        "172.16.0.1",  # RFC 1918 class B
+        "192.168.1.100",  # RFC 1918 class C
+        "169.254.0.1",  # link-local
     ]
 
     def test_check_ip_rejects_loopback(self, client_valid_token):
@@ -306,23 +306,17 @@ class TestSuccessPage:
 
     def test_success_page_rejects_invalid_ip(self, client_no_token):
         """Success page must return 400 for a non-IP ip param."""
-        response = client_no_token.get(
-            "/success?ip=not_an_ip&expires=2026-06-01"
-        )
+        response = client_no_token.get("/success?ip=not_an_ip&expires=2026-06-01")
         assert response.status_code == 400
 
     def test_success_page_rejects_invalid_date(self, client_no_token):
         """Success page must return 400 for a malformed expires param."""
-        response = client_no_token.get(
-            "/success?ip=1.2.3.4&expires=tuesday"
-        )
+        response = client_no_token.get("/success?ip=1.2.3.4&expires=tuesday")
         assert response.status_code == 400
 
     def test_success_page_accepts_ipv6(self, client_no_token):
         """Success page should accept a valid IPv6 address."""
-        response = client_no_token.get(
-            "/success?ip=2001:db8::1&expires=2026-06-01"
-        )
+        response = client_no_token.get("/success?ip=2001:db8::1&expires=2026-06-01")
         assert response.status_code == 200
 
 
@@ -384,18 +378,30 @@ class TestWebRateLimiting:
         """After exceeding the per-IP limit /check-ip should return 429."""
         app = _make_app(event_loop_thread, rate_limit=2)
         with app.test_client() as client:
-            client.get(f"/check-ip/{VALID_TOKEN}", environ_base={"REMOTE_ADDR": "8.8.8.8"})
-            client.get(f"/check-ip/{VALID_TOKEN}", environ_base={"REMOTE_ADDR": "8.8.8.8"})
-            response = client.get(f"/check-ip/{VALID_TOKEN}", environ_base={"REMOTE_ADDR": "8.8.8.8"})
+            client.get(
+                f"/check-ip/{VALID_TOKEN}", environ_base={"REMOTE_ADDR": "8.8.8.8"}
+            )
+            client.get(
+                f"/check-ip/{VALID_TOKEN}", environ_base={"REMOTE_ADDR": "8.8.8.8"}
+            )
+            response = client.get(
+                f"/check-ip/{VALID_TOKEN}", environ_base={"REMOTE_ADDR": "8.8.8.8"}
+            )
         assert response.status_code == 429
 
     def test_confirm_ip_returns_429_when_rate_limited(self, event_loop_thread):
         """After exceeding the per-IP limit /confirm-ip should return 429."""
         app = _make_app(event_loop_thread, rate_limit=2)
         with app.test_client() as client:
-            client.post(f"/confirm-ip/{VALID_TOKEN}", environ_base={"REMOTE_ADDR": "8.8.8.8"})
-            client.post(f"/confirm-ip/{VALID_TOKEN}", environ_base={"REMOTE_ADDR": "8.8.8.8"})
-            response = client.post(f"/confirm-ip/{VALID_TOKEN}", environ_base={"REMOTE_ADDR": "8.8.8.8"})
+            client.post(
+                f"/confirm-ip/{VALID_TOKEN}", environ_base={"REMOTE_ADDR": "8.8.8.8"}
+            )
+            client.post(
+                f"/confirm-ip/{VALID_TOKEN}", environ_base={"REMOTE_ADDR": "8.8.8.8"}
+            )
+            response = client.post(
+                f"/confirm-ip/{VALID_TOKEN}", environ_base={"REMOTE_ADDR": "8.8.8.8"}
+            )
         assert response.status_code == 429
 
     def test_health_not_rate_limited(self, event_loop_thread):
@@ -410,8 +416,12 @@ class TestWebRateLimiting:
         """429 response should render an informative error page."""
         app = _make_app(event_loop_thread, rate_limit=1)
         with app.test_client() as client:
-            client.get(f"/check-ip/{VALID_TOKEN}", environ_base={"REMOTE_ADDR": "8.8.8.8"})
-            response = client.get(f"/check-ip/{VALID_TOKEN}", environ_base={"REMOTE_ADDR": "8.8.8.8"})
+            client.get(
+                f"/check-ip/{VALID_TOKEN}", environ_base={"REMOTE_ADDR": "8.8.8.8"}
+            )
+            response = client.get(
+                f"/check-ip/{VALID_TOKEN}", environ_base={"REMOTE_ADDR": "8.8.8.8"}
+            )
         assert b"Too Many Requests" in response.data
 
 
@@ -476,9 +486,7 @@ class TestServerInfoCallback:
 
         callback.assert_not_called()
 
-    def test_callback_not_called_when_no_callback_configured(
-        self, event_loop_thread
-    ):
+    def test_callback_not_called_when_no_callback_configured(self, event_loop_thread):
         """Confirm-IP succeeds normally when no callback is registered."""
         token_row = {"id": 1, "user_id": 42, "token": VALID_TOKEN}
         app = _make_app(event_loop_thread, token_row=token_row)

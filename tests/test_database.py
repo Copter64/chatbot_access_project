@@ -8,7 +8,6 @@ import pytest
 
 from database.models import Database
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -133,8 +132,7 @@ class TestAccessTokens:
 
 
 class TestIPAddresses:
-    """Tests for add_ip_address, get_user_active_ips,
-    get_expired_active_ips, and deactivate_ip."""
+    """Tests for IP address add, query, expiry, and deactivate operations."""
 
     async def test_add_ip_returns_int(self, db):
         uid = await db.create_user("200", "alice")

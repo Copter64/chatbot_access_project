@@ -1,11 +1,8 @@
 [flake8]
 max-line-length = 88
-extend-ignore = E203,W503
-exclude =
-    .git,
-    __pycache__,
-    venv,
-    .venv,
-    build,
-    dist,
-    *.egg-info
+extend-ignore = E203, W503
+
+per-file-ignores =
+    # Test files: missing docstrings on test methods are expected
+    tests/*.py: D100, D101, D102, D103, D104
+    test_*.py: D100, D101, D102, D103, D104

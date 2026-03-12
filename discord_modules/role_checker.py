@@ -3,8 +3,9 @@
 This module provides functions to check if users have required roles.
 """
 
-import discord
 from typing import Optional
+
+import discord
 
 from config import Config
 from utils.logger import get_logger
