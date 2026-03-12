@@ -69,6 +69,11 @@ are required.
 
 ### Recommended settings for `master`
 
+> **Prerequisites**: The status check names (`Lint`, `Test`) only appear in
+> GitHub's search box after the workflow has run at least once. Push the
+> `.github/workflows/ci.yml` file to master first, wait for the Actions run to
+> complete, then come back and configure the protection rule.
+
 1. Go to **GitHub → Settings → Branches**
 2. Click **Add branch protection rule**
 3. Set **Branch name pattern** to `master`
@@ -78,8 +83,10 @@ are required.
    - ✅ **Require status checks to pass before merging**
      - Search for and add: **`Test`**
      - Search for and add: **`Lint`**
-   - ✅ **Require branches to be up to date before merging** — prevents stale
-     PRs from merging without re-running checks against the latest master
+   - ✅ **Require branches to be up to date before merging** — this checkbox
+     only appears after at least one required check has been added above;
+     prevents stale PRs from merging without re-running checks against the
+     latest master
 5. Save the rule
 
 Once configured, GitHub blocks the merge button until all required checks pass.
