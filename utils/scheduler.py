@@ -154,6 +154,7 @@ def start_scheduler(
     loop: asyncio.AbstractEventLoop,
     unifi_manager=None,
     interval_hours: int = 24,
+    interval_seconds: int = 0,
     warning_callback: Optional[Callable[[str, str, str], None]] = None,
     warning_days: int = 3,
 ) -> BackgroundScheduler:
@@ -161,7 +162,8 @@ def start_scheduler(
 
     Creates a :class:`~apscheduler.schedulers.background.BackgroundScheduler`
     with a single interval job that calls :func:`cleanup_expired_ips` and
-    :func:`warn_expiring_ips` every ``interval_hours`` hours.  Coroutines are
+    :func:`warn_expiring_ips` every ``interval_hours`` hours (or
+    ``interval_seconds`` seconds when that is non-zero).  Coroutines are
     dispatched onto ``loop`` via :func:`asyncio.run_coroutine_threadsafe` so
     they run safely alongside the Discord bot and web server.
 
@@ -170,7 +172,10 @@ def start_scheduler(
         loop: The running asyncio event loop (from ``asyncio.get_running_loop()``
             inside the ``main`` coroutine).
         unifi_manager: Optional Unifi firewall manager.
-        interval_hours: How often to run the job.  Defaults to 24.
+        interval_hours: How often to run the job in hours.  Defaults to 24.
+            Ignored when ``interval_seconds`` is non-zero.
+        interval_seconds: Override interval in seconds.  Non-zero values take
+            precedence over ``interval_hours``.  Intended for testing only.
         warning_callback: Optional sync callable ``(discord_id, ip, expires)``
             used to send expiry warning DMs.  When ``None`` warnings are skipped.
         warning_days: How many days before expiry to send the DM.  Defaults to 3.
@@ -211,16 +216,25 @@ def start_scheduler(
             )
 
     _scheduler = BackgroundScheduler(daemon=True)
+
+    # interval_seconds (non-zero) takes precedence — intended for testing.
+    if interval_seconds > 0:
+        trigger_kwargs = {"seconds": interval_seconds}
+        interval_desc = f"{interval_seconds}s"
+    else:
+        trigger_kwargs = {"hours": interval_hours}
+        interval_desc = f"{interval_hours}h"
+
     _scheduler.add_job(
         _job,
         trigger="interval",
-        hours=interval_hours,
+        **trigger_kwargs,
         id="cleanup_expired_ips",
         name="IP expiry cleanup",
         misfire_grace_time=3600,  # allow up to 1 h late start
     )
     _scheduler.start()
-    logger.info(f"✅ Cleanup scheduler started — runs every {interval_hours} hour(s)")
+    logger.info(f"✅ Cleanup scheduler started — runs every {interval_desc}")
     return _scheduler
 
 

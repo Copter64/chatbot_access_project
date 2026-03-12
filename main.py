@@ -129,11 +129,14 @@ async def main():
                 )
 
         # Start the background cleanup scheduler
+        # CLEANUP_INTERVAL_SECONDS overrides CLEANUP_INTERVAL_HOURS when set
+        # (useful for local testing without waiting 24 h between runs)
         start_scheduler(
             db,
             loop,
             unifi_manager=unifi_manager,
             interval_hours=Config.CLEANUP_INTERVAL_HOURS,
+            interval_seconds=Config.CLEANUP_INTERVAL_SECONDS,
             warning_callback=_warning_callback,
             warning_days=Config.EXPIRY_WARNING_DAYS,
         )
