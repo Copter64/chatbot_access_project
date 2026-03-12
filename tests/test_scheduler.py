@@ -9,7 +9,12 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from utils.scheduler import cleanup_expired_ips, start_scheduler, stop_scheduler
+from utils.scheduler import (
+    cleanup_expired_ips,
+    start_scheduler,
+    stop_scheduler,
+    warn_expiring_ips,
+)
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -198,3 +203,102 @@ class TestSchedulerLifecycle:
 
         sched_module._scheduler = None
         stop_scheduler()  # must not raise
+
+
+# ---------------------------------------------------------------------------
+# warn_expiring_ips tests
+# ---------------------------------------------------------------------------
+
+
+def _make_expiring_record(ip_id: int, ip: str, discord_id: str = "111") -> dict:
+    """Return a minimal ip_addresses row dict for expiry-warning tests."""
+    return {
+        "id": ip_id,
+        "user_id": 1,
+        "ip_address": ip,
+        "expires_at": "2026-03-14 00:00:00",
+        "is_active": 1,
+        "warning_sent": 0,
+        "discord_id": discord_id,
+        "discord_username": "testuser",
+    }
+
+
+class TestWarnExpiringIps:
+    """Unit tests for the warn_expiring_ips coroutine."""
+
+    @pytest.mark.asyncio
+    async def test_no_expiring_ips_returns_zero_counts(self):
+        """When no IPs are expiring soon the function is a no-op."""
+        db = MagicMock()
+        db.get_ips_expiring_soon = AsyncMock(return_value=[])
+        db.mark_ip_warning_sent = AsyncMock()
+        callback = MagicMock()
+
+        result = await warn_expiring_ips(db, callback, warning_days=3)
+
+        assert result == {"warned": 0, "errors": 0}
+        callback.assert_not_called()
+        db.mark_ip_warning_sent.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_warns_each_expiring_ip(self):
+        """Callback is called once per expiring IP and each row is marked."""
+        db = MagicMock()
+        records = [
+            _make_expiring_record(1, "1.2.3.4", "111"),
+            _make_expiring_record(2, "5.6.7.8", "222"),
+        ]
+        db.get_ips_expiring_soon = AsyncMock(return_value=records)
+        db.mark_ip_warning_sent = AsyncMock(return_value=True)
+        callback = MagicMock()
+
+        result = await warn_expiring_ips(db, callback, warning_days=3)
+
+        assert result["warned"] == 2
+        assert result["errors"] == 0
+        assert callback.call_count == 2
+        callback.assert_any_call("111", "1.2.3.4", "2026-03-14")
+        callback.assert_any_call("222", "5.6.7.8", "2026-03-14")
+        assert db.mark_ip_warning_sent.call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_no_callback_returns_zero_without_db_query(self):
+        """When warning_callback is None no DB interaction occurs."""
+        db = MagicMock()
+        db.get_ips_expiring_soon = AsyncMock()
+
+        result = await warn_expiring_ips(db, None, warning_days=3)
+
+        assert result == {"warned": 0, "errors": 0}
+        db.get_ips_expiring_soon.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_callback_error_counted_as_error(self):
+        """If the callback raises, the record is counted as an error."""
+        db = MagicMock()
+        db.get_ips_expiring_soon = AsyncMock(
+            return_value=[_make_expiring_record(1, "1.2.3.4")]
+        )
+        db.mark_ip_warning_sent = AsyncMock(return_value=True)
+        callback = MagicMock(side_effect=Exception("DM failed"))
+
+        result = await warn_expiring_ips(db, callback, warning_days=3)
+
+        assert result["warned"] == 0
+        assert result["errors"] == 1
+        db.mark_ip_warning_sent.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_expires_at_trimmed_to_date(self):
+        """expires_at with a time component is truncated to YYYY-MM-DD."""
+        db = MagicMock()
+        record = _make_expiring_record(1, "1.2.3.4")
+        record["expires_at"] = "2026-03-14 12:34:56"
+        db.get_ips_expiring_soon = AsyncMock(return_value=[record])
+        db.mark_ip_warning_sent = AsyncMock(return_value=True)
+        callback = MagicMock()
+
+        await warn_expiring_ips(db, callback, warning_days=3)
+
+        callback.assert_called_once_with("111", "1.2.3.4", "2026-03-14")
