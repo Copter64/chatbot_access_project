@@ -108,7 +108,7 @@ main() {
     if ! openssl x509 -noout -subject -in "$BOT_CERT_DIR/fullchain.pem" >/dev/null 2>&1; then
       fail "cert-parse"
     fi
-    if ! openssl rsa -noout -check -in "$BOT_CERT_DIR/privkey.pem" >/dev/null 2>&1; then
+    if ! openssl pkey -noout -in "$BOT_CERT_DIR/privkey.pem" >/dev/null 2>&1; then
       echo "KEY_CHECK_WARN: privkey parse failed (passphrase or format)." >&2
     fi
     local enddate not_after
