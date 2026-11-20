@@ -5,7 +5,6 @@ a function to run it in a background thread alongside the Discord bot.
 """
 
 import asyncio
-import ssl
 import threading
 from typing import TYPE_CHECKING, Any, Callable, Optional
 
@@ -14,6 +13,7 @@ from flask import Flask, Response
 from config import Config
 from utils.logger import get_logger
 from web.security import SecurityManager
+from web.ssl import build_ssl_context
 
 if TYPE_CHECKING:
     from unifi_modules.firewall import UnifiFirewallManager
@@ -90,35 +90,40 @@ def create_app(
 def run_web_server(app: Flask) -> threading.Thread:
     """Start the Flask web server in a daemon thread.
 
-    If SSL_CERT and SSL_KEY are configured, the server runs over HTTPS.
-    Otherwise it falls back to plain HTTP (useful for local development).
+    TLS behaviour is resolved by :func:`web.ssl.build_ssl_context` from
+    ``SSL_CERT`` / ``SSL_KEY``:
+
+    * both set  -> HTTPS (expiry is logged; see ``docs/SSL.md``)
+    * both unset -> plain HTTP, with a warning at startup
+    * one set   -> :class:`web.ssl.ConfigError`, i.e. the server refuses
+      to start rather than silently running unencrypted.
 
     Args:
         app: Configured Flask application instance.
 
     Returns:
-        threading.Thread: The background thread running the server.
+        threading.Thread: The background worker thread.
     """
-    ssl_context = None
-    if Config.SSL_CERT and Config.SSL_KEY:
-        ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-        ssl_context.load_cert_chain(certfile=Config.SSL_CERT, keyfile=Config.SSL_KEY)
-        logger.info(f"TLS enabled — cert: {Config.SSL_CERT}")
-    else:
-        logger.warning("SSL_CERT/SSL_KEY not set — web server running over plain HTTP")
+    ssl_config = build_ssl_context(Config.SSL_CERT, Config.SSL_KEY)
+    if not ssl_config.enabled:
+        logger.warning(
+            "TLS is DISABLED (SSL_CERT/SSL_KEY unset). The IP-capture "
+            "URLs will be plain HTTP — only do this if the host is not "
+            "internet-exposed (see docs/SSL.md, Option A)."
+        )
 
     def _run() -> None:
         """Run Flask server (executed in daemon thread)."""
-        scheme = "https" if ssl_context else "http"
+        scheme = "https" if ssl_config.enabled else "http"
         logger.info(
-            f"Web server starting on " f"{scheme}://{Config.WEB_HOST}:{Config.WEB_PORT}"
+            f"Web server starting on {scheme}://{Config.WEB_HOST}:{Config.WEB_PORT}"
         )
         app.run(
             host=Config.WEB_HOST,
             port=Config.WEB_PORT,
             debug=False,
             use_reloader=False,
-            ssl_context=ssl_context,
+            ssl_context=ssl_config.context,
         )
 
     thread = threading.Thread(target=_run, daemon=True, name="web-server")
