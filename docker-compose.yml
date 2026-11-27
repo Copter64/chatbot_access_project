@@ -29,6 +29,15 @@ services:
     # Give the container read access to host time for scheduler accuracy
     read_only: false
 
+    # Health check: hit /health (returns {"status": "ok"} 200).
+    # DO NOT hit / — it has no route and returns 404.
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,ssl,os; urllib.request.urlopen(f\"https://127.0.0.1:{os.environ.get('WEB_PORT','8443')}/health\", timeout=5, context=ssl._create_unverified_context())"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
     # Limit resource usage
     deploy:
       resources:
